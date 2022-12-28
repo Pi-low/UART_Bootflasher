@@ -1,3 +1,6 @@
 [submodule "RS-232"]
 	path = RS-232
 	url = https://gitlab.com/Teuniz/RS-232.git
+[submodule "Intel_HEX_parser"]
+	path = Intel_HEX_parser
+	url = https://github.com/sfyip/Intel-HEX-file-parser.git

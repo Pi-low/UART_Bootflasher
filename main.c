@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <stringe.h>
-#include "iHexParser/ihex_parser.h"
+#include <string.h>
+#include "Intel_HEX_parser/ihex_parser/ihex_parser.h"
 #include "Crc16/Crc16.h"
 #include "RS-232/rs232.h"
 
