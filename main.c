@@ -4,6 +4,7 @@
 #include <stringe.h>
 #include "iHexParser/ihex_parser.h"
 #include "Crc16/Crc16.h"
+#include "RS-232/rs232.h"
 
 bool printHexData(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size);
 
