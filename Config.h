@@ -2,7 +2,7 @@
 #define CONFIG_H_INCLUDED
 
 /* CONFIGURATION */
-#define ALLOCATION_SIZE 4096
+#define ALLOCATION_SIZE 1024
 #define BLOCK_SIZE 128
 
 typedef struct

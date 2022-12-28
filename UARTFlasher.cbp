@@ -36,14 +36,14 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="Crc16/Crc16.h" />
+		<Unit filename="Intel_HEX_parser/ihex_parser/ihex_parser.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Intel_HEX_parser/ihex_parser/ihex_parser.h" />
 		<Unit filename="RS-232/rs232.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="RS-232/rs232.h" />
-		<Unit filename="iHexParser/ihex_parser.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="iHexParser/ihex_parser.h" />
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
