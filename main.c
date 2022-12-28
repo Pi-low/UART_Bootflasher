@@ -13,6 +13,8 @@ int main(int argc, char * argv[])
     uint8_t u8DataBuffer[ALLOCATION_SIZE];
     uint32_t u32TotalFileSize = 0;
     uint32_t u32StreamBlockSize = 0;
+    uint32_t u32DataCnt = 0;
+    uint32_ u32Remain = 0;
     char* cFilename = NULL;
 
     cFilename = (char *) malloc(strlen("test.hex") * sizeof(char));
@@ -46,21 +48,13 @@ int main(int argc, char * argv[])
 
     system("PAUSE");
 
-        while (u32DataCount < u32TotalFileSize)
+    while (u32DataCount < u32TotalFileSize)
     {
         u32Read = fread(u8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE/BLOCK_SIZE), MyFile);
         if (u32Read != 0)
         {
             printf("Read %u: ", u32Read  *BLOCK_SIZE);
-
-            u32DataCount += u32Read * BLOCK_SIZE;
-            ChunkOfStream.u32FileSize = u32Read * BLOCK_SIZE;
-            ChunkOfStream.u32Cursor = 0;
-            u32ParsedMails = parseCmuxFrames(&pTsHeadMail, &ChunkOfStream, u8FilterChannel);
-            u32CmuxMailCount += u32ParsedMails;
-
-            printf("found %u mails\r\n", u32ParsedMails);
-
+            u32DataCnt += u32Read * BLOCK_SIZE;
         }
         else
         {
@@ -72,13 +66,6 @@ int main(int argc, char * argv[])
                 printf("Read %u(%u): ", u32Read  * BLOCK_SIZE, u32Remain);
 
                 u32DataCount += u32Remain;
-                ChunkOfStream.u32FileSize = u32Remain;
-                ChunkOfStream.u32Cursor = 0;
-                ChunkOfStream.pu8FileStream += BLOCK_SIZE - u32Remain;
-                u32ParsedMails = parseCmuxFrames(&pTsHeadMail, &ChunkOfStream, u8FilterChannel);
-
-                u32CmuxMailCount += u32ParsedMails;
-                printf("found %u mail, end !\r\n", u32ParsedMails);
 
             }
             else
