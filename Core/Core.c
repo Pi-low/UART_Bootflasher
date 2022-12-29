@@ -1,5 +1,7 @@
+#include <stdio.h>
 #include "Core.h"
 #include "../Config.h"
+#include "../Intel_HEX_parser/ihex_parser/ihex_parser.h"
 
 static uint8_t HexToDec(uint8_t h)
 {
@@ -31,10 +33,11 @@ void preParser(uint8_t* Fpu8Buffer, uint32_t* Fpu32Len)
     uint32_t u32PrevLineStart = 0;
     uint32_t u32Tmp = 0;
 
-    static uint8_t pu8Saved[64];
+    static uint8_t pu8Saved[EXTENSION];
     uint8_t u8Tmp = 0;
     uint8_t u8Len = 0;
-    uint8_t* pu8char = 0;
+    uint8_t* pu8char = NULL;
+    uint8_t* pu8Parse = NULL;
     uint8_t pu8TmpBuf[ALLOCATION_SIZE];
 
     if (su32SavedLen != 0)
@@ -62,6 +65,7 @@ void preParser(uint8_t* Fpu8Buffer, uint32_t* Fpu32Len)
     while (u32Index < *Fpu32Len)
     {
         pu8char = Fpu8Buffer + u32Index;
+        pu8Parse = pu8char;
         if (*(pu8char) == ':')
         {
             u8Len = ((HexToDec(*(pu8char + 1)) << 4) & 0xF0) | (HexToDec(*(pu8char + 2)) & 0xF);
@@ -72,7 +76,12 @@ void preParser(uint8_t* Fpu8Buffer, uint32_t* Fpu32Len)
                 pu8char += u8Len;
                 if (*(pu8char) == '\r' && *(pu8char + 1) == '\n')
                 {
-                    u32Index += u8Len + 2;
+                    u8Len += 2;
+                    u32Index += u8Len;
+                    if (ihex_parser(pu8Parse, u8Len) == false)
+                    {
+                        ihex_reset_state();
+                    }
                     u32PrevLineStart = u32Index;
                 }
             }
