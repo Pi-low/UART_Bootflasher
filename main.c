@@ -13,7 +13,6 @@ int main(int argc, char * argv[])
     FILE* MyFile;
     uint8_t u8DataBuffer[ALLOCATION_SIZE + EXTENSION];
     uint8_t* pu8LastData = NULL;
-    bool bParseRes = true;
     uint32_t u32Read = 0;
     uint32_t u32lastRead = 0;
     uint32_t u32TotalFileSize = 0;
@@ -22,8 +21,10 @@ int main(int argc, char * argv[])
     uint32_t u32Remain = 0;
     char* cFilename = NULL;
 
-    ihex_set_callback_func((ihex_callback_fp)printHexData);
+    ihex_set_callback_func((ihex_callback_fp)dataManager);
     ihex_reset_state();
+    initDatablockGen();
+
     cFilename = (char *) malloc(strlen("test.hex") * sizeof(char));
     sprintf(cFilename, "test.hex");
 
@@ -64,8 +65,8 @@ int main(int argc, char * argv[])
             u32DataCnt += u32Read;
 
             preParser(u8DataBuffer, &u32Read);
-            //bParseRes = ihex_parser(u8DataBuffer, u32Read);
-            //printf("Read %u (parsed: %u)\r\n", u32Read, bParseRes);
+            printf("Read %u:\r\n", u32Read);
+            ihex_parser(u8DataBuffer, u32Read);
         }
         else
         {
@@ -81,10 +82,9 @@ int main(int argc, char * argv[])
                 pu8LastData += u32Read - u32Remain;
 
                 preParser(pu8LastData, &u32Remain);
-                //bParseRes = ihex_parser(pu8LastData, u32Remain);
+                printf("Read %u(%u): ", u32Read, u32Remain);
+                ihex_parser(pu8LastData, u32Remain);
 
-
-                //printf("Read %u(%u)(parsed: %u): ", u32Read, u32Remain, bParseRes);
             }
             else
             {
