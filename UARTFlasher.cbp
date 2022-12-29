@@ -32,6 +32,10 @@
 			<Add option="-Wall" />
 		</Compiler>
 		<Unit filename="Config.h" />
+		<Unit filename="Core/Core.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Core/Core.h" />
 		<Unit filename="Crc16/Crc16.c">
 			<Option compilerVar="CC" />
 		</Unit>
