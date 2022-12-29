@@ -3,17 +3,19 @@
 #include <stdint.h>
 #include <string.h>
 #include "Config.h"
+#include "Core/Core.h"
 #include "Intel_HEX_parser/ihex_parser/ihex_parser.h"
 #include "Crc16/Crc16.h"
 #include "RS-232/rs232.h"
 
-bool printHexData(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size);
-
 int main(int argc, char * argv[])
 {
     FILE* MyFile;
-    uint8_t u8DataBuffer[ALLOCATION_SIZE];
+    uint8_t u8DataBuffer[ALLOCATION_SIZE + 256];
+    uint8_t* pu8LastData = NULL;
+    bool bParseRes = true;
     uint32_t u32Read = 0;
+    uint32_t u32lastRead = 0;
     uint32_t u32TotalFileSize = 0;
     uint32_t u32StreamBlockSize = 0;
     uint32_t u32DataCnt = 0;
@@ -58,9 +60,16 @@ int main(int argc, char * argv[])
         u32Read = fread(u8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE/BLOCK_SIZE), MyFile);
         if (u32Read != 0)
         {
-            printf("Read %u\r\n", u32Read * BLOCK_SIZE);
-            u32DataCnt += u32Read * BLOCK_SIZE;
-            ihex_parser(u8DataBuffer, u32Read * BLOCK_SIZE);
+            u32Read *= BLOCK_SIZE;
+            u32DataCnt += u32Read;
+
+            preParser(u8DataBuffer, &u32Read);
+            bParseRes = ihex_parser(u8DataBuffer, u32Read);
+            if (!bParseRes)
+            {
+                ihex_reset_state();
+            }
+            printf("Read %u (parsed: %u)\r\n", u32Read, bParseRes);
         }
         else
         {
@@ -69,10 +78,17 @@ int main(int argc, char * argv[])
             u32Remain = u32TotalFileSize - u32DataCnt;
             if (u32Read != 0)
             {
-                printf("Read %u(%u): ", u32Read * BLOCK_SIZE, u32Remain);
-
+                u32Read *= BLOCK_SIZE;
                 u32DataCnt += u32Remain;
 
+                pu8LastData = u8DataBuffer;
+                pu8LastData += u32Read - u32Remain;
+
+                preParser(pu8LastData, &u32Remain);
+                bParseRes = ihex_parser(pu8LastData, u32Remain);
+
+
+                printf("Read %u(%u)(parsed: %u): ", u32Read, u32Remain, bParseRes);
             }
             else
             {
@@ -82,17 +98,6 @@ int main(int argc, char * argv[])
         }
     }
     fclose(MyFile);
-
+    system("PAUSE");
     return 0;
-}
-
-bool printHexData(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
-{
-    uint8_t u8Cnt = 0;
-    printf("[0x%06X:%u] ", Fu32addr, Fu8Size);
-    for (u8Cnt = 0; u8Cnt < Fu8Size; u8Cnt++)
-    {
-        printf("%02X ", Fpu8Buffer[u8Cnt]);
-    }
-    printf("\r\n");
 }
