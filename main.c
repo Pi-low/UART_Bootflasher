@@ -84,7 +84,7 @@ int main(int argc, char * argv[])
                 preParser(pu8LastData, &u32Remain);
                 printf("Read %u(%u): ", u32Read, u32Remain);
                 ihex_parser(pu8LastData, u32Remain);
-
+                dataManager(0, NULL, 0); /* Send last block */
             }
             else
             {

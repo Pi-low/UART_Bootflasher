@@ -3,10 +3,13 @@
 #include "../Config.h"
 #include "../Intel_HEX_parser/ihex_parser/ihex_parser.h"
 
-static tsDataBlock;
-static teBlockState teCurrentState;
+static tsDataBlock tsCurrentDatablock;
+static uint8_t pu8LogisticData[128];
+static uint16_t u16SWVersion = 0;
+static uint8_t pu8Buff[256];
+static uint16_t u16BufLen = 0;
 
-static uint8_t HexToDec(uint8_t h)
+uint8_t HexToDec(uint8_t h)
 {
     if (h >= '0' && h <= '9')
         return h - '0';
@@ -20,9 +23,9 @@ static uint8_t HexToDec(uint8_t h)
 
 void initDatablockGen(void)
 {
-    tsDataBlock.u32Addr = 0;
-    tsDataBlock.u16Index = 0;
-    teCurrentState = eStateNewBlock;
+    tsCurrentDatablock.u32StartAddr = 0;
+    tsCurrentDatablock.u32EndAddr = BYTES_PER_BLOCK;
+    tsCurrentDatablock.u16Len = 0;
 }
 
 bool dataManager(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
@@ -30,91 +33,126 @@ bool dataManager(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
     bool bRetVal = true;
     uint16_t u16Cnt = 0;
     uint16_t u16BlankSize = 0;
-    uint16_t u16SavedLen = 0;
-    uint8_t u8Save[BYTES_PER_BLOCK];
-    static uint32_t u32MaxAddr = 0;
+    uint8_t pu8SaveData[BYTES_PER_BLOCK];
+    uint8_t u8SaveLen = 0;
+    uint32_t u32Fill = 0;
 
-    switch(teCurrentState)
+    if (Fpu8Buffer == NULL)
     {
-        case eStateNewBlock:
-            tsDataBlock.u32Addr = Fu32addr;
-            tsDataBlock.u16Index = 0;
-            u32MaxAddr = Fu32addr + BYTES_PER_BLOCK;
-            for(u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
-            {
-                tsDataBlock.pu8Data[tsDataBlock.u16Index] = *(Fpu8Buffer + u16Cnt);
-                tsDataBlock.u16Index++;
-            }
-            teCurrentState = eStateFillBlock;
-        break;
-
-        case eStateFillBlock:
-            if (Fu32addr == (tsDataBlock.u16Index + tsDataBlock.u32Addr))  /* Continuous data */
-            {
-                for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
-                {
-                    if (tsDataBlock.u16Index >= BYTES_PER_BLOCK)
-                    {
-                        /* Block overflow */
-                        u8Save[u16SavedLen] = *(Fpu8Buffer + u16Cnt);
-                        u16SavedLen++;
-                    }
-                    else
-                    {
-                        tsDataBlock.pu8Data[tsDataBlock.u16Index] = *(Fpu8Buffer + u16Cnt);
-                        tsDataBlock.u16Index++;
-                    }
-                }
-                if (tsDataBlock.u16Index == BYTES_PER_BLOCK)
-                {
-                    teCurrentState = eStatePushBlock;
-                }
-            }
-            else if ((Fu32addr > (tsDataBlock.u16Index + tsDataBlock.u32Addr)) && (Fu32addr < u32MaxAddr)) /* Address jump inside current block */
-            {
-                u16BlankSize = Fu32addr - tsDataBlock.u32Addr;
-                while (u16Cnt < u16BlankSize)
-                {
-                    tsDataBlock.pu8Data[tsDataBlock.u16Index] = 0xFF;
-                    tsDataBlock.pu8Data[tsDataBlock.u16Index + 1] = 0xFF;
-                    tsDataBlock.pu8Data[tsDataBlock.u16Index + 2] = 0xFF;
-                    tsDataBlock.pu8Data[tsDataBlock.u16Index + 3] = 0;
-                    tsDataBlock.u16Index += 4;
-                    u16Cnt += 4;
-                }
-                for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
-                {
-                    if (tsDataBlock.u16Index >= BYTES_PER_BLOCK)
-                    {
-                        /* Block overflow */
-                        u8Save[u16SavedLen] = *(Fpu8Buffer + u16Cnt);
-                        u16SavedLen++;
-                    }
-                    else
-                    {
-                        tsDataBlock.pu8Data[tsDataBlock.u16Index] = *(Fpu8Buffer + u16Cnt);
-                        tsDataBlock.u16Index++;
-                    }
-                }
-                if (tsDataBlock.u16Index == BYTES_PER_BLOCK)
-                {
-                    teCurrentState = eStatePushBlock;
-                }
-            }
-            else if (Fu32addr > u32MaxAddr)
-            {
-                for(u16SavedLen = 0; u16SavedLen < Fu8Size; u16SavedLen++)
-                {
-                    u8Save[u16SavedLen] = *(Fpu8Buffer + u16SavedLen);
-                }
-                teCurrentState = eStatePushBlock;
-            }
-
-        case eStatePushBlock:
-
-            break;
+        sendBlock(0xFFFFFF00);
     }
 
+    if ((Fu32addr >= tsCurrentDatablock.u32StartAddr) && (Fu32addr < tsCurrentDatablock.u32EndAddr))
+    {
+        /* Parsed address is withing the current block */
+        if (Fu32addr == (tsCurrentDatablock.u32StartAddr + tsCurrentDatablock.u16Len))
+        {
+            /* Continuous data within block */
+            for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
+            {
+                if (tsCurrentDatablock.u16Len >= BYTES_PER_BLOCK)
+                {
+                    /* Parsed data exceed the current block size, save data for next block */
+                    pu8SaveData[u8SaveLen] = *(Fpu8Buffer + u16Cnt);
+                    u8SaveLen++;
+                }
+                else
+                {
+                    /* Append datablock */
+                    tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len] = *(Fpu8Buffer + u16Cnt);
+                    tsCurrentDatablock.u16Len ++;
+                }
+            }
+        }
+        else if (Fu32addr >= (tsCurrentDatablock.u32StartAddr + tsCurrentDatablock.u16Len))
+        {
+            /* Data still within the current block,  */
+            u32Fill = Fu32addr - (tsCurrentDatablock.u32StartAddr + tsCurrentDatablock.u16Len);
+            while (u16Cnt < u32Fill)
+            {
+                tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len] = 0xFF;
+                tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len + 1] = 0xFF;
+                tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len + 2] = 0xFF;
+                tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len + 3] = 0; /* Phantom byte */
+                u16Cnt += 4;
+                tsCurrentDatablock.u16Len += 4;
+            }
+            for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
+            {
+                if (tsCurrentDatablock.u16Len >= BYTES_PER_BLOCK)
+                {
+                    /* Parsed data exceed the current block size, save data for next block */
+                    pu8SaveData[u8SaveLen] = *(Fpu8Buffer + u16Cnt);
+                    u8SaveLen++;
+                }
+                else
+                {
+                    /* Append datablock */
+                    tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len] = *(Fpu8Buffer + u16Cnt);
+                    tsCurrentDatablock.u16Len ++;
+                }
+            }
+        }
+        else
+        {
+            /* Fu32addr is lower than current index*/
+            bRetVal = false;
+            printf("Lower address: abort [%08X:%u]\r\n", Fu32addr, Fu8Size);
+        }
+
+        if((tsCurrentDatablock.u32StartAddr + tsCurrentDatablock.u16Len) >= tsCurrentDatablock.u32EndAddr)
+        {
+            /* Reach block end address, send block and load remaining data */
+            sendBlock(tsCurrentDatablock.u32EndAddr); /* send block, reset block with new address */
+            for (u16Cnt = 0; u16Cnt < u8SaveLen; u16Cnt++)
+            {
+                tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len] = pu8SaveData[u16Cnt];
+                tsCurrentDatablock.u16Len ++;
+            }
+
+        }
+    }
+    else if(Fu32addr >= tsCurrentDatablock.u32EndAddr)
+    {
+        /* Parsed address is over the current block */
+        sendBlock(Fu32addr); /* send current block, reset block with parsed address */
+        for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
+        {
+            /* Append datablock */
+            tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len] = *(Fpu8Buffer + u16Cnt);
+            tsCurrentDatablock.u16Len ++;
+        }
+    }
+    else
+    {
+        bRetVal = false;
+    }
+
+    return bRetVal;
+}
+
+bool findLogisticData(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
+{
+    bool bRetVal = true;
+    uint16_t u16Cnt = 0;
+
+    if ((Fu32addr >= ADDR_APPL_DESC) && (Fu32addr < ADDR_APPL_VERSION))
+    {
+        for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
+        {
+            pu8LogisticData[u16BufLen] = *(Fpu8Buffer + u16Cnt);
+            u16BufLen++;
+        }
+    }
+    else if (Fu32addr == ADDR_APPL_VERSION)
+    {
+
+        for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
+        {
+            pu8LogisticData[u16BufLen] = *(Fpu8Buffer + u16Cnt);
+            u16BufLen++;
+        }
+    }
     return bRetVal;
 }
 
@@ -184,4 +222,37 @@ void preParser(uint8_t* Fpu8Buffer, uint32_t* Fpu32Len)
             }
         }
     }
+}
+
+void sendBlock(uint32_t Fu32NewStartAddr)
+{
+   uint16_t u16Cnt = 0;
+   static uint16_t u16BlockCnt = 1;
+   uint32_t u32OffsetAddr = 0;
+   printf("Block %u [0x%08X:%u]:", u16BlockCnt, tsCurrentDatablock.u32StartAddr, tsCurrentDatablock.u16Len);
+   for (u16Cnt = 0; u16Cnt < tsCurrentDatablock.u16Len; u16Cnt++)
+   {
+       if ((u16Cnt % 32) == 0)
+       {
+           printf("\r\n");
+       }
+       printf("%02X ", tsCurrentDatablock.pu8Data[u16Cnt]);
+   }
+   printf("\r\n");
+   u16BlockCnt ++;
+
+   /* Prepare next block */
+   if (Fu32NewStartAddr % BYTES_PER_BLOCK == 0)
+   {
+       tsCurrentDatablock.u32StartAddr = Fu32NewStartAddr;
+       tsCurrentDatablock.u32EndAddr = tsCurrentDatablock.u32StartAddr + BYTES_PER_BLOCK;
+       tsCurrentDatablock.u16Len = 0;
+   }
+   else
+   {
+       u32OffsetAddr = Fu32NewStartAddr % (uint32_t)BYTES_PER_BLOCK;
+       tsCurrentDatablock.u32StartAddr = Fu32NewStartAddr - u32OffsetAddr;
+       tsCurrentDatablock.u32EndAddr = tsCurrentDatablock.u32StartAddr + (uint32_t)BYTES_PER_BLOCK;
+       tsCurrentDatablock.u16Len = 0;
+   }
 }
