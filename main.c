@@ -7,23 +7,19 @@
 #include "Intel_HEX_parser/ihex_parser/ihex_parser.h"
 #include "RS-232/rs232.h"
 
+bool main_Bootloading(FILE* FpHexFile, uint32_t Fu32FileSize, uint8_t* Fpu8DataBuffer);
+bool main_GetInfoFromiHexFile(FILE* FpHexFile, uint32_t Fu32FileSize, uint8_t* Fpu8DataBuffer);
+uint32_t main_GetFileSize(FILE* FpHexFile);
+
 int main(int argc, char * argv[])
 {
     FILE* MyFile;
-    uint8_t u8DataBuffer[ALLOCATION_SIZE + EXTENSION];
-    uint8_t* pu8LastData = NULL;
-    uint32_t u32Read = 0;
-    uint32_t u32lastRead = 0;
     uint32_t u32TotalFileSize = 0;
-    uint32_t u32StreamBlockSize = 0;
-    uint32_t u32DataCnt = 0;
-    uint32_t u32Remain = 0;
+    uint8_t pu8DataBuffer[ALLOCATION_SIZE + EXTENSION];
     char* cFilename = NULL;
 
-    /* First we want to retrieve logistic info */
-    ihex_set_callback_func((ihex_callback_fp)callback_findLogisticData);
-    ihex_reset_state();
-    initDatablockGen();
+    Core_InitDataBlockGen();
+
 /* ================================================================== */
 /*  MANAGE FILE                                                       */
 /* ================================================================== */
@@ -42,79 +38,94 @@ int main(int argc, char * argv[])
         printf("Open: \"%s\"\r\n", cFilename);
     }
 
-    /* Start analysis */
-    if (fseek(MyFile, 0, SEEK_END) == 0)
-    {
-        u32TotalFileSize = ftell(MyFile);
-        fseek(MyFile, 0, SEEK_SET); /* Reset cursor */
-        printf("File size: %u\r\n", u32TotalFileSize);
-    }
-    else
-    {
-        printf("Error fseek\r\n");
-        system("PAUSE");
-        return 0;
-    }
+    u32TotalFileSize = main_GetFileSize(MyFile);
+    main_GetInfoFromiHexFile(MyFile, u32TotalFileSize, pu8DataBuffer);
 
-/* ================================================================== */
-/*  GET LOGISTIC INFORMATION FROM APPLICATION HEX FILE                */
-/* ================================================================== */
-    do
-    {
-        u32Read = fread(u8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE/BLOCK_SIZE), MyFile);
-        u32Read *= BLOCK_SIZE;
-        preParser(u8DataBuffer, &u32Read);
-    } while (ihex_parser(u8DataBuffer, u32Read));
-
-    fseek(MyFile, 0, SEEK_SET); /* Reset cursor */
-
-    getSwInfo();
-    /* Then we manage the parsed data to generate data blocks */
-    ihex_set_callback_func((ihex_callback_fp)callback_dataManager);
-    ihex_reset_state();
-    initDatablockGen();
     system("PAUSE");
 
-/* ================================================================== */
-/*  PARSE AND SEND DATA BLOCKS TO COM PORT                            */
-/* ================================================================== */
-    while (u32DataCnt < u32TotalFileSize)
+    main_Bootloading(MyFile, u32TotalFileSize, pu8DataBuffer);
+
+    fclose(MyFile);
+    system("PAUSE");
+    return EXIT_SUCCESS;
+}
+
+bool main_Bootloading(FILE* FpHexFile, uint32_t Fu32FileSize, uint8_t* Fpu8DataBuffer)
+{
+    bool RetVal = true;
+    uint8_t* pu8LastData = NULL;
+    uint32_t u32Read = 0, u32DataCnt = 0, u32Remain = 0;
+
+    ihex_set_callback_func((ihex_callback_fp)Core_CbDataBlockGen);
+    ihex_reset_state();
+    Core_InitDataBlockGen();
+    fseek(FpHexFile, 0, SEEK_SET); /* Reset cursor */
+
+    while ((u32DataCnt < Fu32FileSize) && (RetVal == true))
     {
-        u32Read = fread(u8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE/BLOCK_SIZE), MyFile);
+        u32Read = fread(Fpu8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE/BLOCK_SIZE), FpHexFile);
         if (u32Read != 0)
         {
             u32Read *= BLOCK_SIZE;
             u32DataCnt += u32Read;
 
-            preParser(u8DataBuffer, &u32Read);
+            Core_PreParse(Fpu8DataBuffer, &u32Read);
             printf("Read %u:\r\n", u32Read);
-            ihex_parser(u8DataBuffer, u32Read);
+            RetVal &= ihex_parser(Fpu8DataBuffer, u32Read);
         }
         else
         {
-            fseek(MyFile, -(int)BLOCK_SIZE, SEEK_END); /* Set cursor to last block */
-            u32Read = fread(u8DataBuffer, BLOCK_SIZE, 1, MyFile);
-            u32Remain = u32TotalFileSize - u32DataCnt;
+            fseek(FpHexFile, -(int)BLOCK_SIZE, SEEK_END); /* Set cursor to last block */
+            u32Read = fread(Fpu8DataBuffer, BLOCK_SIZE, 1, FpHexFile);
+            u32Remain = Fu32FileSize - u32DataCnt;
             if (u32Read != 0)
             {
                 u32Read *= BLOCK_SIZE;
                 u32DataCnt += u32Remain;
 
-                pu8LastData = u8DataBuffer;
+                pu8LastData = Fpu8DataBuffer;
                 pu8LastData += u32Read - u32Remain;
 
-                preParser(pu8LastData, &u32Remain);
+                Core_PreParse(pu8LastData, &u32Remain);
                 printf("Read %u(%u): ", u32Read, u32Remain);
-                ihex_parser(pu8LastData, u32Remain);
+                RetVal &= ihex_parser(pu8LastData, u32Remain);
             }
             else
             {
                 printf("Read error, abort !\r\n");
-                break; /* Get out of the while loop */
+                RetVal = false;
             }
         }
     }
-    fclose(MyFile);
-    system("PAUSE");
-    return 0;
+
+    return RetVal;
+}
+
+bool main_GetInfoFromiHexFile(FILE* FpHexFile, uint32_t Fu32FileSize, uint8_t* Fpu8DataBuffer)
+{
+    bool RetVal = true;
+    uint32_t u32Read = 0;
+
+    ihex_reset_state();
+    ihex_set_callback_func((ihex_callback_fp)Core_CbFetchLogisticData);
+    fseek(FpHexFile, 0, SEEK_SET);
+
+    do
+    {
+        u32Read = fread(Fpu8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE/BLOCK_SIZE), FpHexFile);
+        u32Read *= BLOCK_SIZE;
+        Core_PreParse(Fpu8DataBuffer, &u32Read);
+    } while (ihex_parser(Fpu8DataBuffer, u32Read));
+    Core_GetSwInfo(NULL, NULL);
+    return RetVal;
+}
+
+uint32_t main_GetFileSize(FILE* FpHexFile)
+{
+    uint32_t u32FileSize = 0;
+    if (fseek(FpHexFile, 0, SEEK_END) == 0)
+    {
+        u32FileSize = ftell(FpHexFile);
+    }
+    return u32FileSize;
 }
