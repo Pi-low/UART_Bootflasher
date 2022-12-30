@@ -21,10 +21,12 @@ int main(int argc, char * argv[])
     uint32_t u32Remain = 0;
     char* cFilename = NULL;
 
-    ihex_set_callback_func((ihex_callback_fp)dataManager);
+    ihex_set_callback_func((ihex_callback_fp)findLogisticData);
     ihex_reset_state();
     initDatablockGen();
-
+/* ================================================================== */
+/*  MANAGE FILE                                                       */
+/* ================================================================== */
     cFilename = (char *) malloc(strlen("test.hex") * sizeof(char));
     sprintf(cFilename, "test.hex");
 
@@ -54,8 +56,27 @@ int main(int argc, char * argv[])
         return 0;
     }
 
+/* ================================================================== */
+/*  GET LOGISTIC INFORMATION FROM APPLICATION HEX FILE                                                     */
+/* ================================================================== */
+    do
+    {
+        u32Read = fread(u8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE/BLOCK_SIZE), MyFile);
+        u32Read *= BLOCK_SIZE;
+        preParser(u8DataBuffer, &u32Read);
+    } while (ihex_parser(u8DataBuffer, u32Read));
+
+    fseek(MyFile, 0, SEEK_SET); /* Reset cursor */
+
+    getSwInfo();
+    ihex_set_callback_func((ihex_callback_fp)dataManager);
+    ihex_reset_state();
+    initDatablockGen();
     system("PAUSE");
 
+/* ================================================================== */
+/*  PARSE AND SEND DATA BLOCKS TO COM PORT                                                     */
+/* ================================================================== */
     while (u32DataCnt < u32TotalFileSize)
     {
         u32Read = fread(u8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE/BLOCK_SIZE), MyFile);

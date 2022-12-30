@@ -4,10 +4,16 @@
 #include "../Intel_HEX_parser/ihex_parser/ihex_parser.h"
 
 static tsDataBlock tsCurrentDatablock;
+
 static uint8_t pu8LogisticData[128];
-static uint16_t u16SWVersion = 0;
+static uint8_t u8SwMajor = 0;
+static uint8_t u8SwMinor = 0;
+
 static uint8_t pu8Buff[256];
 static uint16_t u16BufLen = 0;
+
+static uint8_t pu8Saved[EXTENSION];
+static uint32_t su32SavedLen = 0;
 
 uint8_t HexToDec(uint8_t h)
 {
@@ -26,6 +32,7 @@ void initDatablockGen(void)
     tsCurrentDatablock.u32StartAddr = 0;
     tsCurrentDatablock.u32EndAddr = BYTES_PER_BLOCK;
     tsCurrentDatablock.u16Len = 0;
+    su32SavedLen = 0;
 }
 
 bool dataManager(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
@@ -140,30 +147,39 @@ bool findLogisticData(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8S
     {
         for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
         {
-            pu8LogisticData[u16BufLen] = *(Fpu8Buffer + u16Cnt);
+            pu8Buff[u16BufLen] = *(Fpu8Buffer + u16Cnt);
             u16BufLen++;
+        }
+        if (u16BufLen == BYTES_PER_BLOCK)
+        {
+            manageAppliDescription();
         }
     }
     else if (Fu32addr == ADDR_APPL_VERSION)
     {
-
         for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
         {
-            pu8LogisticData[u16BufLen] = *(Fpu8Buffer + u16Cnt);
+            pu8Buff[u16BufLen] = *(Fpu8Buffer + u16Cnt);
             u16BufLen++;
         }
+        u8SwMinor = pu8Buff[0];
+        u8SwMajor = pu8Buff[1];
+        bRetVal = false;
+    }
+    if (Fu32addr >= ADDR_START_APPLI)
+    {
+        bRetVal = false;
     }
     return bRetVal;
 }
 
 void preParser(uint8_t* Fpu8Buffer, uint32_t* Fpu32Len)
 {
-    static uint32_t su32SavedLen = 0;
     uint32_t u32Index = 0;
     uint32_t u32PrevLineStart = 0;
     uint32_t u32Tmp = 0;
 
-    static uint8_t pu8Saved[EXTENSION];
+
     uint8_t u8Tmp = 0;
     uint8_t u8Len = 0;
     uint8_t* pu8char = NULL;
@@ -255,4 +271,24 @@ void sendBlock(uint32_t Fu32NewStartAddr)
        tsCurrentDatablock.u32EndAddr = tsCurrentDatablock.u32StartAddr + (uint32_t)BYTES_PER_BLOCK;
        tsCurrentDatablock.u16Len = 0;
    }
+}
+
+void manageAppliDescription(void)
+{
+    uint16_t u16Cnt = 0;
+    uint16_t u16Index = 0;
+    while (u16Cnt < u16BufLen)
+    {
+        pu8LogisticData[u16Index] = pu8Buff[u16Cnt];
+        u16Index ++;
+        pu8LogisticData[u16Index] = pu8Buff[u16Cnt + 1];
+        u16Index ++;
+        u16Cnt += 4;
+    }
+    u16BufLen = 0;
+}
+
+void getSwInfo(void)
+{
+    printf("Found SW %u.%u: \"%s\"\r\n", u8SwMajor, u8SwMinor, pu8LogisticData);
 }
