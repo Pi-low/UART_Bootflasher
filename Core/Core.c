@@ -36,7 +36,7 @@ void initDatablockGen(void)
     su32SavedLen = 0;
 }
 
-bool dataManager(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
+bool callback_dataManager(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
 {
     bool bRetVal = true;
     uint16_t u16Cnt = 0;
@@ -120,7 +120,7 @@ bool dataManager(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
 
         }
     }
-    else if(Fu32addr >= tsCurrentDatablock.u32EndAddr)
+    else if((Fu32addr >= tsCurrentDatablock.u32EndAddr) && (Fu32addr < ADDR_APPL_END))
     {
         /* Parsed address is over the current block */
         sendBlock(Fu32addr); /* send current block, reset block with parsed address */
@@ -139,7 +139,7 @@ bool dataManager(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
     return bRetVal;
 }
 
-bool findLogisticData(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
+bool callback_findLogisticData(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
 {
     bool bRetVal = true;
     uint16_t u16Cnt = 0;
@@ -326,5 +326,5 @@ void manageAppliDescription(void)
 
 void getSwInfo(void)
 {
-    printf("Found SW %u.%u: \"%s\"\r\n", u8SwMajor, u8SwMinor, pu8LogisticData);
+    printf("Found: SW %u.%u -> \"%s\"\r\n", u8SwMajor, u8SwMinor, pu8LogisticData);
 }

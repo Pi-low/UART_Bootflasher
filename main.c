@@ -5,7 +5,6 @@
 #include "Config.h"
 #include "Core/Core.h"
 #include "Intel_HEX_parser/ihex_parser/ihex_parser.h"
-#include "Crc16/Crc16.h"
 #include "RS-232/rs232.h"
 
 int main(int argc, char * argv[])
@@ -21,7 +20,8 @@ int main(int argc, char * argv[])
     uint32_t u32Remain = 0;
     char* cFilename = NULL;
 
-    ihex_set_callback_func((ihex_callback_fp)findLogisticData);
+    /* First we want to retrieve logistic info */
+    ihex_set_callback_func((ihex_callback_fp)callback_findLogisticData);
     ihex_reset_state();
     initDatablockGen();
 /* ================================================================== */
@@ -57,7 +57,7 @@ int main(int argc, char * argv[])
     }
 
 /* ================================================================== */
-/*  GET LOGISTIC INFORMATION FROM APPLICATION HEX FILE                                                     */
+/*  GET LOGISTIC INFORMATION FROM APPLICATION HEX FILE                */
 /* ================================================================== */
     do
     {
@@ -69,13 +69,14 @@ int main(int argc, char * argv[])
     fseek(MyFile, 0, SEEK_SET); /* Reset cursor */
 
     getSwInfo();
-    ihex_set_callback_func((ihex_callback_fp)dataManager);
+    /* Then we manage the parsed data to generate data blocks */
+    ihex_set_callback_func((ihex_callback_fp)callback_dataManager);
     ihex_reset_state();
     initDatablockGen();
     system("PAUSE");
 
 /* ================================================================== */
-/*  PARSE AND SEND DATA BLOCKS TO COM PORT                                                     */
+/*  PARSE AND SEND DATA BLOCKS TO COM PORT                            */
 /* ================================================================== */
     while (u32DataCnt < u32TotalFileSize)
     {
@@ -105,7 +106,6 @@ int main(int argc, char * argv[])
                 preParser(pu8LastData, &u32Remain);
                 printf("Read %u(%u): ", u32Read, u32Remain);
                 ihex_parser(pu8LastData, u32Remain);
-                dataManager(0, NULL, 0); /* Send last block */
             }
             else
             {
