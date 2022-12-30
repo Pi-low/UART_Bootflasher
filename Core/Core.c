@@ -2,6 +2,7 @@
 #include "Core.h"
 #include "../Config.h"
 #include "../Intel_HEX_parser/ihex_parser/ihex_parser.h"
+#include "../Crc16/Crc16.h"
 
 static tsDataBlock tsCurrentDatablock;
 
@@ -44,7 +45,7 @@ bool dataManager(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
     uint8_t u8SaveLen = 0;
     uint32_t u32Fill = 0;
 
-    if (Fpu8Buffer == NULL)
+    if (Fpu8Buffer == NULL) /* Shall be used to send the last block which size is below 256 */
     {
         sendBlock(0xFFFFFF00);
     }
@@ -73,7 +74,7 @@ bool dataManager(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
         }
         else if (Fu32addr >= (tsCurrentDatablock.u32StartAddr + tsCurrentDatablock.u16Len))
         {
-            /* Data still within the current block,  */
+            /* Data still within the current block  */
             u32Fill = Fu32addr - (tsCurrentDatablock.u32StartAddr + tsCurrentDatablock.u16Len);
             while (u16Cnt < u32Fill)
             {
@@ -242,22 +243,56 @@ void preParser(uint8_t* Fpu8Buffer, uint32_t* Fpu32Len)
 
 void sendBlock(uint32_t Fu32NewStartAddr)
 {
+   tsFrame tsDataTransferFrame;
    uint16_t u16Cnt = 0;
-   static uint16_t u16BlockCnt = 1;
+   uint16_t u16Tmp = 0;
+   static uint16_t u16BlockCnt = 0;
    uint32_t u32OffsetAddr = 0;
-   printf("Block %u [0x%08X:%u]:", u16BlockCnt, tsCurrentDatablock.u32StartAddr, tsCurrentDatablock.u16Len);
+   /* Use short variable name: lazy */
+   uint8_t* pu8FrameData = tsDataTransferFrame.pu8Payload;
+   uint16_t* pu16CRC = &tsCurrentDatablock.u16CRCBlock;
+
+   tsDataTransferFrame.u16Lengh = tsCurrentDatablock.u16Len + 5;
+   tsDataTransferFrame.u8ID = eService_dataTransfer;
+
+   /* Load block address */
+   *(pu8FrameData) =     (tsCurrentDatablock.u32StartAddr >> 16) & 0x000000FF;
+   *(pu8FrameData + 1) = (tsCurrentDatablock.u32StartAddr >> 8) & 0x000000FF;
+   *(pu8FrameData + 2) = tsCurrentDatablock.u32StartAddr & 0x000000FF;
+
+   BufUpdateCrc16(pu16CRC, pu8FrameData, 3);
+   pu8FrameData += 3;
+
    for (u16Cnt = 0; u16Cnt < tsCurrentDatablock.u16Len; u16Cnt++)
+   {
+       *(pu8FrameData + u16Cnt) = tsCurrentDatablock.pu8Data[u16Cnt];
+   }
+
+   BufUpdateCrc16(pu16CRC, pu8FrameData, tsCurrentDatablock.u16Len);
+   pu8FrameData += tsCurrentDatablock.u16Len;
+
+   /* XOR CRC16 */
+   u16Tmp = *(pu16CRC) ^ 0xFFFF;
+   /* Reverse CRC16 MSB/LSB */
+   *(pu8FrameData) = u16Tmp & 0x00FF;
+   *(pu8FrameData + 1) = (u16Tmp >> 8) & 0x00FF;
+
+#ifdef PRINT_DEBUG_TRACE
+   printf("Block %u\r\n", u16BlockCnt);
+   for (u16Cnt = 0; u16Cnt < tsDataTransferFrame.u16Lengh; u16Cnt++)
    {
        if ((u16Cnt % 32) == 0)
        {
            printf("\r\n");
        }
-       printf("%02X ", tsCurrentDatablock.pu8Data[u16Cnt]);
+       printf("%02X ", tsDataTransferFrame.pu8Payload[u16Cnt]);
    }
    printf("\r\n");
-   u16BlockCnt ++;
+#endif
+   /* Send the block */
 
    /* Prepare next block */
+   tsCurrentDatablock.u16CRCBlock = 0;
    if (Fu32NewStartAddr % BYTES_PER_BLOCK == 0)
    {
        tsCurrentDatablock.u32StartAddr = Fu32NewStartAddr;
@@ -271,6 +306,7 @@ void sendBlock(uint32_t Fu32NewStartAddr)
        tsCurrentDatablock.u32EndAddr = tsCurrentDatablock.u32StartAddr + (uint32_t)BYTES_PER_BLOCK;
        tsCurrentDatablock.u16Len = 0;
    }
+   u16BlockCnt ++;
 }
 
 void manageAppliDescription(void)
