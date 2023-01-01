@@ -1,8 +1,9 @@
 #include <stdio.h>
-#include "Core.h"
 #include "../Config.h"
+#include "../Bootloader/Bootloader.h"
 #include "../Intel_HEX_parser/ihex_parser/ihex_parser.h"
 #include "../Crc16/Crc16.h"
+#include "Core.h"
 
 /* ------------------------------------------------------------ */
 /* Static variables declaration                                 */
