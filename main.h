@@ -6,8 +6,7 @@ typedef enum
     eStateSelectComPort,
     eStateSelectFile,
     eStateTargetInfo,
-    eStateFlashTarget,
-    eStateQuit
+    eStateFlashTarget
 } teMainStates;
 
 #endif // MAIN_H_INCLUDED

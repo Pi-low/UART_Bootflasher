@@ -77,3 +77,11 @@ bool Bootloader_GetInfoFromiHexFile(FILE* FpHexFile, uint32_t Fu32FileSize)
     Core_GetSwInfo(NULL, NULL);
     return RetVal;
 }
+
+bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version)
+{
+    tsFrame tsSendMsg;
+    
+    return true;
+}
+

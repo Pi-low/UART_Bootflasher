@@ -260,7 +260,7 @@ void Core_SendBlock(uint32_t Fu32NewStartAddr)
    uint8_t* pu8FrameData = tsDataTransferFrame.pu8Payload;
    uint16_t* pu16CRC = &tsCurrentDatablock.u16CRCBlock;
 
-   tsDataTransferFrame.u16Lengh = tsCurrentDatablock.u16Len + 5;
+   tsDataTransferFrame.u16Length = tsCurrentDatablock.u16Len + 5;
    tsDataTransferFrame.u8ID = eService_dataTransfer;
 
    /* Load block address */
@@ -287,18 +287,18 @@ void Core_SendBlock(uint32_t Fu32NewStartAddr)
 
 #ifdef PRINT_DEBUG_TRACE
    printf("Block %u\r\n", u16BlockCnt);
-   for (u16Cnt = 0; u16Cnt < tsDataTransferFrame.u16Lengh; u16Cnt++)
+   for (u16Cnt = 0; u16Cnt < tsDataTransferFrame.u16Length; u16Cnt++)
    {
        if ((u16Cnt % 32) == 0)
        {
            printf("\r\n ");
        }
-       if ((u16Cnt == 0) || (u16Cnt == (tsDataTransferFrame.u16Lengh - 2)))
+       if ((u16Cnt == 0) || (u16Cnt == (tsDataTransferFrame.u16Length - 2)))
        {
            printf("[");
        }
        printf("%02X", tsDataTransferFrame.pu8Payload[u16Cnt]);
-       if ((u16Cnt == 2) || (u16Cnt == (tsDataTransferFrame.u16Lengh - 1)))
+       if ((u16Cnt == 2) || (u16Cnt == (tsDataTransferFrame.u16Length - 1)))
        {
            printf("]");
        }
@@ -307,6 +307,7 @@ void Core_SendBlock(uint32_t Fu32NewStartAddr)
    printf("\r\n");
 #endif
    /* Send the block */
+   ComPort_SendGenericFrame(&tsDataTransferFrame, 50);
 
    /* Prepare next block */
    tsCurrentDatablock.u16CRCBlock = 0;

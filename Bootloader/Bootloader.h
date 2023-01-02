@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include "../Config.h"
 
+#define MAX_BUFFER_SIZE     266
 #define MAX_FRAME_LENGTH    262
 #define BYTES_PER_BLOCK     256 /* which correspond to a flash row size in byte */
 #define APPL_DESC_LEN       128
@@ -26,8 +27,9 @@ typedef struct
 typedef struct
 {
     uint8_t u8ID;
-    uint16_t u16Lengh;
+    uint16_t u16Length;
     uint8_t pu8Payload[MAX_FRAME_LENGTH];
+    uint8_t pu8Response[MAX_FRAME_LENGTH];
 } tsFrame;
 
 typedef enum
