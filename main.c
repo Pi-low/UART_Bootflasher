@@ -40,7 +40,7 @@ int main(int argc, char * argv[])
                 /* Catch filename argument */
                 if ((argc > 1) && (argv[1] != NULL))
                 {
-                    pcString = (char*) malloc(strlen(argv[1]) * sizeof(char));
+                    //pcString = (char*) malloc(strlen(argv[1]) * sizeof(char));
                     pcString = argv[1];
                 }
                 else
@@ -53,35 +53,36 @@ int main(int argc, char * argv[])
                     printf("Select filename: \r\n");
                     scanf("%[^\n]", pcString);
 #endif // DEBUG_CONFIG
-                    MyFile = fopen(pcString, "rb");
-                    if (MyFile != NULL)
-                    {
-                        printf("Open: \"%s\"\r\n", pcString);
-                        u32TotalFileSize = main_GetFileSize(MyFile);
-                        Bootloader_GetInfoFromiHexFile(MyFile, u32TotalFileSize);
-#if DEBUG_OFFLINE == 1
-                        teMainCurrentState = eStateFlashTarget;
-                        system("PAUSE");
-#else
-                        teMainCurrentState = eStateTargetInfo;
-#endif // DEBUG_OFFLINE
-
-                    }
-                    else
-                    {
-                        printf("Cannot open file, exit program !\r\n");
-                        u8KeepLoop = 0;
-                    }
-                    free(pcString);
                 }
+                MyFile = fopen(pcString, "rb");
+                if (MyFile != NULL)
+                {
+                    printf("Open: \"%s\"\r\n", pcString);
+                    u32TotalFileSize = main_GetFileSize(MyFile);
+                    Bootloader_GetInfoFromiHexFile(MyFile, u32TotalFileSize);
+#if DEBUG_OFFLINE == 1
+                    teMainCurrentState = eStateFlashTarget;
+                    system("PAUSE");
+#else
+                    teMainCurrentState = eStateTargetInfo;
+#endif // DEBUG_OFFLINE
+                }
+                else
+                {
+                    printf("[INFO]: Cannot open file, exit program !\r\n");
+                    u8KeepLoop = 0;
+                }
+                free(pcString);
+
             break;
 
             case eStateTargetInfo:
+#if DEBUG_OFFLINE == 0
+                printf("[INFO]: Request farget info:\r\n");
                 bTmp &= Bootloader_RequestSwVersion(NULL);
                 bTmp &= Bootloader_RequestSwInfo(NULL);
-#if DEBUG_OFFLINE == 1
-                if (bTmp)
 #endif // DEBUG_OFFLINE
+                if (bTmp)
                 {
                     teMainCurrentState = eStateFlashTarget;
                     system("PAUSE");
@@ -95,8 +96,10 @@ int main(int argc, char * argv[])
             case eStateFlashTarget:
                 if (MyFile != NULL)
                 {
-
+#if DEBUG_OFFLINE == 0
+                    printf("[INFO]: Target flash erase:\r\n");
                     bTmp &= Bootloader_RequestEraseFlash();
+#endif // DEBUG_OFFLINE
                     if (bTmp)
                     {
                         Bootloader_ProcessFile(MyFile, u32TotalFileSize);
