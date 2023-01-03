@@ -40,7 +40,6 @@ int main(int argc, char * argv[])
                 /* Catch filename argument */
                 if ((argc > 1) && (argv[1] != NULL))
                 {
-                    //pcString = (char*) malloc(strlen(argv[1]) * sizeof(char));
                     pcString = argv[1];
                 }
                 else
@@ -49,6 +48,7 @@ int main(int argc, char * argv[])
                     pcString = (char*) malloc(strlen("test.hex") * sizeof(char));
                     sprintf(pcString, "test.hex");
 #else
+                    fflush(stdin);
                     pcString = (char*) malloc(256 * sizeof(char));
                     printf("Select filename: \r\n");
                     scanf("%[^\n]", pcString);
