@@ -6,7 +6,12 @@
 #define BLOCK_SIZE 128
 #define EXTENSION 256
 
+#ifdef DEBUG_CONFIG
 #define PRINT_DEBUG_TRACE 0u
 #define DEBUG_OFFLINE 1u
+#else
+#define PRINT_DEBUG_TRACE 0u
+#define DEBUG_OFFLINE 0u
+#endif
 
 #endif // CONFIG_H_INCLUDED

@@ -81,6 +81,7 @@ int main(int argc, char * argv[])
                 printf("[INFO]: Request farget info:\r\n");
                 bTmp &= Bootloader_RequestSwVersion(NULL);
                 bTmp &= Bootloader_RequestSwInfo(NULL);
+                printf("[INFO]: Abort operation !\r\n");
 #endif // DEBUG_OFFLINE
                 if (bTmp)
                 {
@@ -97,12 +98,16 @@ int main(int argc, char * argv[])
                 if (MyFile != NULL)
                 {
 #if DEBUG_OFFLINE == 0
-                    printf("[INFO]: Target flash erase:\r\n");
+                    printf("[INFO]: Target flash erase\r\n");
                     bTmp &= Bootloader_RequestEraseFlash();
 #endif // DEBUG_OFFLINE
                     if (bTmp)
                     {
                         Bootloader_ProcessFile(MyFile, u32TotalFileSize);
+                    }
+                    else
+                    {
+                        printf("[INFO]: Abort operation !\r\n");
                     }
                 }
                 u8KeepLoop = 0;
