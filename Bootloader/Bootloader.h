@@ -64,5 +64,10 @@ typedef enum
 
 bool Bootloader_ProcessFile(FILE* FpHexFile, uint32_t Fu32FileSize);
 bool Bootloader_GetInfoFromiHexFile(FILE* FpHexFile, uint32_t Fu32FileSize);
+void Bootloader_PrintErrcode(uint8_t Fu8ErrCode);
+bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version);
+bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf);
+bool Bootloader_TransferData(tsDataBlock* FptsDataBlock);
+bool Bootloader_RequestEraseFlash(void);
 
 #endif // BOOTLOADER_H_INCLUDED

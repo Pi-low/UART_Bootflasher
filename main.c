@@ -17,6 +17,7 @@ int main(int argc, char * argv[])
     uint32_t u32TotalFileSize = 0;
     char* pcString = NULL;
     char pcBuffer[10];
+    bool bTmp = true;
     while (u8KeepLoop)
     {
         switch(teMainCurrentState)
@@ -58,8 +59,12 @@ int main(int argc, char * argv[])
                         printf("Open: \"%s\"\r\n", pcString);
                         u32TotalFileSize = main_GetFileSize(MyFile);
                         Bootloader_GetInfoFromiHexFile(MyFile, u32TotalFileSize);
+#if DEBUG_OFFLINE == 1
                         teMainCurrentState = eStateFlashTarget;
                         system("PAUSE");
+#else
+                        teMainCurrentState = eStateTargetInfo;
+#endif // DEBUG_OFFLINE
 
                     }
                     else
@@ -72,13 +77,30 @@ int main(int argc, char * argv[])
             break;
 
             case eStateTargetInfo:
-
+                bTmp &= Bootloader_RequestSwVersion(NULL);
+                bTmp &= Bootloader_RequestSwInfo(NULL);
+#if DEBUG_OFFLINE == 1
+                if (bTmp)
+#endif // DEBUG_OFFLINE
+                {
+                    teMainCurrentState = eStateFlashTarget;
+                    system("PAUSE");
+                }
+                else
+                {
+                    u8KeepLoop = 0;
+                }
             break;
 
             case eStateFlashTarget:
                 if (MyFile != NULL)
                 {
-                    Bootloader_ProcessFile(MyFile, u32TotalFileSize);
+
+                    bTmp &= Bootloader_RequestEraseFlash();
+                    if (bTmp)
+                    {
+                        Bootloader_ProcessFile(MyFile, u32TotalFileSize);
+                    }
                 }
                 u8KeepLoop = 0;
             break;

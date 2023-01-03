@@ -6,6 +6,7 @@
 #define BLOCK_SIZE 128
 #define EXTENSION 256
 
-#define PRINT_DEBUG_TRACE
+#define PRINT_DEBUG_TRACE 0u
+#define DEBUG_OFFLINE 1u
 
 #endif // CONFIG_H_INCLUDED

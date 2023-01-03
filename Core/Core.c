@@ -2,7 +2,6 @@
 #include "../Config.h"
 #include "../Bootloader/Bootloader.h"
 #include "../Intel_HEX_parser/ihex_parser/ihex_parser.h"
-#include "../Crc16/Crc16.h"
 #include "Core.h"
 
 /* ------------------------------------------------------------ */
@@ -22,7 +21,7 @@ static uint32_t su32SavedLen = 0;
 /* Static functions declaration                                 */
 /* ------------------------------------------------------------ */
 static uint8_t Core_HexToDec(uint8_t h);
-static void Core_SendBlock(uint32_t Fu32NewStartAddr);
+static bool Core_SendBlock(uint32_t Fu32NewStartAddr);
 static void Core_FormatDecription(void);
 
 uint8_t Core_HexToDec(uint8_t h)
@@ -55,7 +54,7 @@ bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t F
 
     if (Fpu8Buffer == NULL) /* Shall be used to send the last block which size is below 256 */
     {
-        Core_SendBlock(0xFFFFFF00);
+        bRetVal &= Core_SendBlock(0xFFFFFF00);
     }
 
     if ((Fu32addr >= tsCurrentDatablock.u32StartAddr) && (Fu32addr < tsCurrentDatablock.u32EndAddr))
@@ -119,7 +118,7 @@ bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t F
         if((tsCurrentDatablock.u32StartAddr + tsCurrentDatablock.u16Len) >= tsCurrentDatablock.u32EndAddr)
         {
             /* Reach block end address, send block and load remaining data */
-            Core_SendBlock(tsCurrentDatablock.u32EndAddr); /* send block, reset block with new address */
+            bRetVal &= Core_SendBlock(tsCurrentDatablock.u32EndAddr); /* send block, reset block with new address */
             for (u16Cnt = 0; u16Cnt < u8SaveLen; u16Cnt++)
             {
                 tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len] = pu8SaveData[u16Cnt];
@@ -131,7 +130,7 @@ bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t F
     else if((Fu32addr >= tsCurrentDatablock.u32EndAddr) && (Fu32addr < ADDR_APPL_END))
     {
         /* Parsed address is over the current block */
-        Core_SendBlock(Fu32addr); /* send current block, reset block with parsed address */
+        bRetVal &= Core_SendBlock(Fu32addr); /* send current block, reset block with parsed address */
         for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
         {
             /* Append datablock */
@@ -249,65 +248,22 @@ void Core_PreParse(uint8_t* Fpu8Buffer, uint32_t* Fpu32Len)
     }
 }
 
-void Core_SendBlock(uint32_t Fu32NewStartAddr)
+bool Core_SendBlock(uint32_t Fu32NewStartAddr)
 {
-   tsFrame tsDataTransferFrame;
-   uint16_t u16Cnt = 0;
-   uint16_t u16Tmp = 0;
-   static uint16_t u16BlockCnt = 0;
+   bool bRetVal = true;
    uint32_t u32OffsetAddr = 0;
-   /* Use short variable name: lazy */
-   uint8_t* pu8FrameData = tsDataTransferFrame.pu8Payload;
-   uint16_t* pu16CRC = &tsCurrentDatablock.u16CRCBlock;
-
-   tsDataTransferFrame.u16Length = tsCurrentDatablock.u16Len + 5;
-   tsDataTransferFrame.u8ID = eService_dataTransfer;
-
-   /* Load block address */
-   *(pu8FrameData) =     (tsCurrentDatablock.u32StartAddr >> 16) & 0x000000FF;
-   *(pu8FrameData + 1) = (tsCurrentDatablock.u32StartAddr >> 8) & 0x000000FF;
-   *(pu8FrameData + 2) = tsCurrentDatablock.u32StartAddr & 0x000000FF;
-
-   Crc16_BufferUpdate(pu16CRC, pu8FrameData, 3);
-   pu8FrameData += 3;
-
-   for (u16Cnt = 0; u16Cnt < tsCurrentDatablock.u16Len; u16Cnt++)
-   {
-       *(pu8FrameData + u16Cnt) = tsCurrentDatablock.pu8Data[u16Cnt];
-   }
-
-   Crc16_BufferUpdate(pu16CRC, pu8FrameData, tsCurrentDatablock.u16Len);
-   pu8FrameData += tsCurrentDatablock.u16Len;
-
-   /* XOR CRC16 */
-   u16Tmp = *(pu16CRC) ^ 0xFFFF;
-   /* Reverse CRC16 MSB/LSB */
-   *(pu8FrameData) = u16Tmp & 0x00FF;
-   *(pu8FrameData + 1) = (u16Tmp >> 8) & 0x00FF;
-
-#ifdef PRINT_DEBUG_TRACE
-   printf("Block %u\r\n", u16BlockCnt);
-   for (u16Cnt = 0; u16Cnt < tsDataTransferFrame.u16Length; u16Cnt++)
-   {
-       if ((u16Cnt % 32) == 0)
-       {
-           printf("\r\n ");
-       }
-       if ((u16Cnt == 0) || (u16Cnt == (tsDataTransferFrame.u16Length - 2)))
-       {
-           printf("[");
-       }
-       printf("%02X", tsDataTransferFrame.pu8Payload[u16Cnt]);
-       if ((u16Cnt == 2) || (u16Cnt == (tsDataTransferFrame.u16Length - 1)))
-       {
-           printf("]");
-       }
-       printf(" ");
-   }
-   printf("\r\n");
-#endif
    /* Send the block */
-   ComPort_SendGenericFrame(&tsDataTransferFrame, 50);
+   if (Fu32NewStartAddr < ADDR_APPL_END)
+   {
+        bRetVal = Bootloader_TransferData(&tsCurrentDatablock);
+#ifdef DEBUG_CONFIG
+        bRetVal = true;
+#endif
+   }
+   else
+   {
+       bRetVal = false;
+   }
 
    /* Prepare next block */
    tsCurrentDatablock.u16CRCBlock = 0;
@@ -324,7 +280,8 @@ void Core_SendBlock(uint32_t Fu32NewStartAddr)
        tsCurrentDatablock.u32EndAddr = tsCurrentDatablock.u32StartAddr + (uint32_t)BYTES_PER_BLOCK;
        tsCurrentDatablock.u16Len = 0;
    }
-   u16BlockCnt ++;
+
+   return bRetVal;
 }
 
 void Core_FormatDecription(void)
@@ -344,7 +301,7 @@ void Core_FormatDecription(void)
 
 void Core_GetSwInfo(uint16_t* Fpu16Version, uint8_t* Fpu8Decription)
 {
-    printf("Found: SW %u.%u -> \"%s\"\r\n", u8SwMajor, u8SwMinor, pu8LogisticData);
+    printf("[File SW Version]: %u.%u \r\n[File SW Info]: %s\r\n", u8SwMajor, u8SwMinor, pu8LogisticData);
     if (Fpu16Version != NULL)
     {
         *(Fpu16Version) = (((uint16_t)u8SwMajor << 8) & 0xFF00) | (uint16_t)u8SwMajor;

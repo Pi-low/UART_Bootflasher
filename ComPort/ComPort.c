@@ -101,9 +101,11 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
     {
         FptsMsg->pu8Payload[u16i] = 0;
     }
-
+/* =============================================================================== */
+/*    RECEIVING                                                                    */
+/* =============================================================================== */
     /* Blocking wait */
-    sleep(Fu16Timeout);
+    Sleep(Fu16Timeout);
     u16ByteCnt = RS232_PollComport(siComPortNumber, pu8RxBuffer, MAX_FRAME_LENGTH);
 
     /* Receive response frame */
@@ -119,8 +121,14 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
             u8Checksum = 0;
             for (u16i = 0; u16i < u16FrmLength + 3; u16i++)
             {
-                u8Checksum += *pu8Tmp + u16i;
+                u8Checksum += *(pu8Tmp + u16i);
+#if PRINT_DEBUG_TRACE == 1
+                printf("0x%02X ", *(pu8Tmp + u16i));
+#endif
             }
+#if PRINT_DEBUG_TRACE == 1
+            printf("\r\n");
+#endif
 
             if (u8Checksum == 0)
             {
@@ -135,11 +143,13 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
             } /* if (u8Checksum == 0) */
             else
             {
+                printf("[Error]: Bad rx frame checksum: %u\r\n", u8Checksum);
                 bErrCheck = false;
             }
         } /* if ((u16FrmLength + 4) == iByteCnt) */
         else
         {
+            printf("[Error]: Bad rx frame length: %u\r\n", u16FrmLength + 1);
             bErrCheck = false;
         }
     } /* if ((pu8RxBuffer[0] == 0x5A) && (iByteCnt > 4) && ((pu8RxBuffer[1] & 0x0F) == FptsMsg->u8ID)) */
