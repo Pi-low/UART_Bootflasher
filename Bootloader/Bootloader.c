@@ -125,6 +125,10 @@ bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version)
                 *Fpu16Version <<= 8;
                 *Fpu16Version |= (uint16_t)tsSendMsg.pu8Response[2];
             }
+            if ((tsSendMsg.pu8Response[1] == 0xFF) && (tsSendMsg.pu8Response[2] == 0xFF))
+            {
+                printf("[Target SW Version]: unavailable, blank");
+            }
             printf("[Target SW Version]: %u.%u\r\n", tsSendMsg.pu8Response[1], tsSendMsg.pu8Response[2]);
             return true;
         }

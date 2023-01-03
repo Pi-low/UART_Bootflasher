@@ -91,70 +91,77 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
 
     u8Checksum = ~u8Checksum;
     pu8TxBuffer[4 + u16i] = u8Checksum;
-
+    RS232_flushRX(siComPortNumber);
     RS232_SendBuf(siComPortNumber, pu8TxBuffer, u16FrmLength + 4);
-
-    /* Flush sent message */
-    FptsMsg->u8ID = 0;
-    FptsMsg->u16Length = 0;
-    for (u16i = 0; u16i < MAX_FRAME_LENGTH; u16i++)
+#if PRINT_DEBUG_TRACE == 1
+    printf("[Tx]: ");
+    for(u16i = 0; u16i < u16FrmLength + 4; u16i++)
     {
-        FptsMsg->pu8Payload[u16i] = 0;
+        if ((u16i % 32) == 0)
+        {
+            printf("\r\n");
+        }
+        printf("%02X ", *(pu8TxBuffer + u16i));
     }
+    printf("\r\n");
+#endif // PRINT_DEBUG_TRACE
+
 /* =============================================================================== */
 /*    RECEIVING                                                                    */
 /* =============================================================================== */
     /* Blocking wait */
     Sleep(Fu16Timeout);
+
     u16ByteCnt = RS232_PollComport(siComPortNumber, pu8RxBuffer, MAX_FRAME_LENGTH);
+    u16FrmLength = (((uint16_t)pu8RxBuffer[2] << 8) & 0xFF00) | (uint16_t)pu8RxBuffer[3];
+
+#if PRINT_DEBUG_TRACE == 1
+    printf("[Rx %u/%u]: ", u16ByteCnt, u16FrmLength + 4);
+    for(u16i = 0; u16i < u16ByteCnt; u16i++)
+    {
+        if ((u16i % 32) == 0)
+        {
+            printf("\r\n");
+        }
+        printf("%02X ", pu8RxBuffer[u16i]);
+    }
+    printf("\r\n");
+#endif // PRINT_DEBUG_TRACE
 
     /* Receive response frame */
     if ((pu8RxBuffer[0] == 0x5A) &&
-                                    (u16ByteCnt > 4) &&
-                                    ((pu8RxBuffer[1] & 0x0F) == FptsMsg->u8ID))
+        ((pu8RxBuffer[1] & 0x0F) == FptsMsg->u8ID) &&
+        ((u16FrmLength + 4) == u16ByteCnt))
     {
         pu8Tmp = pu8RxBuffer;
         pu8Tmp ++; /* escape SOF */
-        u16FrmLength = (((uint16_t)pu8RxBuffer[2] << 8) & 0xFF00) | (uint16_t)pu8RxBuffer[3];
-        if ((u16FrmLength + 4) == u16ByteCnt)
+        u8Checksum = 0;
+        for (u16i = 0; u16i < u16FrmLength + 3; u16i++)
         {
-            u8Checksum = 0;
-            for (u16i = 0; u16i < u16FrmLength + 3; u16i++)
-            {
-                u8Checksum += *(pu8Tmp + u16i);
-#if PRINT_DEBUG_TRACE == 1
-                printf("0x%02X ", *(pu8Tmp + u16i));
-#endif
-            }
-#if PRINT_DEBUG_TRACE == 1
-            printf("\r\n");
-#endif
+            u8Checksum += *(pu8Tmp + u16i);
 
-            if (u8Checksum == 0)
+        }
+
+        if (u8Checksum == 0xFF)
+        {
+            u16FrmLength--;
+            FptsMsg->u8ID = *pu8Tmp;
+            FptsMsg->u16Length = u16FrmLength;
+            pu8Tmp += 3;
+            for (u16i = 0; u16i < u16FrmLength; u16i++)
             {
-                u16FrmLength--;
-                FptsMsg->u8ID = *pu8Tmp;
-                FptsMsg->u16Length = u16FrmLength;
-                pu8Tmp += 3;
-                for (u16i = 0; u16i < u16FrmLength; u16i++)
-                {
-                    FptsMsg->pu8Response[u16i] = *(pu8Tmp + u16i);
-                }
-            } /* if (u8Checksum == 0) */
-            else
-            {
-                printf("[Error]: Bad rx frame checksum: %u\r\n", u8Checksum);
-                bErrCheck = false;
+                FptsMsg->pu8Response[u16i] = *(pu8Tmp + u16i);
             }
-        } /* if ((u16FrmLength + 4) == iByteCnt) */
+        } /* if (u8Checksum == 0) */
         else
         {
-            printf("[Error]: Bad rx frame length: %u\r\n", u16FrmLength + 1);
+            printf("[Error]: Bad rx frame checksum: %u\r\n", u8Checksum);
             bErrCheck = false;
         }
-    } /* if ((pu8RxBuffer[0] == 0x5A) && (iByteCnt > 4) && ((pu8RxBuffer[1] & 0x0F) == FptsMsg->u8ID)) */
+    } /* if ((pu8RxBuffer[0] == 0x5A) && ((pu8RxBuffer[1] & 0x0F) == FptsMsg->u8ID) && ((u16FrmLength + 4) == u16ByteCnt)) */
     else
     {
+        printf("[Error]: bad SoF, bad length or bad ID\r\n");
         bErrCheck = false;
     }
     bRetVal = bErrCheck;
