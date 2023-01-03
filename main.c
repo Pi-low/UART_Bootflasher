@@ -50,7 +50,7 @@ int main(int argc, char * argv[])
 #else
                     fflush(stdin);
                     pcString = (char*) malloc(256 * sizeof(char));
-                    printf("Select filename: \r\n");
+                    printf("Enter filename (**.hex): \r\n");
                     scanf("%[^\n]", pcString);
 #endif // DEBUG_CONFIG
                 }
@@ -69,7 +69,7 @@ int main(int argc, char * argv[])
                 }
                 else
                 {
-                    printf("[INFO]: Cannot open file, exit program !\r\n");
+                    printf("[Error]: Cannot open file, exit program !\r\n");
                     u8KeepLoop = 0;
                 }
                 free(pcString);
@@ -78,10 +78,8 @@ int main(int argc, char * argv[])
 
             case eStateTargetInfo:
 #if DEBUG_OFFLINE == 0
-                printf("[INFO]: Request farget info:\r\n");
                 bTmp &= Bootloader_RequestSwVersion(NULL);
                 bTmp &= Bootloader_RequestSwInfo(NULL);
-                printf("[INFO]: Abort operation !\r\n");
 #endif // DEBUG_OFFLINE
                 if (bTmp)
                 {
@@ -90,6 +88,7 @@ int main(int argc, char * argv[])
                 }
                 else
                 {
+                    printf("[Error]: Abort operation !\r\n");
                     u8KeepLoop = 0;
                 }
             break;
@@ -98,8 +97,8 @@ int main(int argc, char * argv[])
                 if (MyFile != NULL)
                 {
 #if DEBUG_OFFLINE == 0
-                    printf("[INFO]: Target flash erase\r\n");
                     bTmp &= Bootloader_RequestEraseFlash();
+                    bTmp &= Bootloader_RequestBootSession(2000);
 #endif // DEBUG_OFFLINE
                     if (bTmp)
                     {

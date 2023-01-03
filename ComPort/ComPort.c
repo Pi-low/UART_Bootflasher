@@ -161,7 +161,7 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
     } /* if ((pu8RxBuffer[0] == 0x5A) && ((pu8RxBuffer[1] & 0x0F) == FptsMsg->u8ID) && ((u16FrmLength + 4) == u16ByteCnt)) */
     else
     {
-        printf("[Error]: bad SoF, bad length or bad ID\r\n");
+        printf("[Error]: no frame found\r\n");
         bErrCheck = false;
     }
     bRetVal = bErrCheck;

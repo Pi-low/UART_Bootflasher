@@ -46,20 +46,21 @@ typedef enum
 
 typedef enum
 {
-    eOperationSuccess =         0,
-    eOperationNotAvailable =    1,
-    eOperationNotAllowed =      2,
-    eOperationFail =            3,
-    eBadChecksum =              4,
-    eBadFrameLength =           5,
-    eUnknownFrameID =           6,
-    eFrameTimeout =             7,
-    eFlashEraseError =          8,
-    eBadBlockAddr =             9,
-    eBadCRCBlock =              10,
-    eFlashWriteError =          11,
-    eAppliCheckError =          12,
-    eBootSessionTimeout =       13
+    eOperationSuccess = 0,
+    eOperationNotAvailable,
+    eOperationNotAllowed,
+    eOperationFail,
+    eBadChecksum,
+    eBadFrameLength,
+    eUnknownFrameID,
+    eFrameTimeout,
+    eFlashEraseError,
+    eBadBlockAddr,
+    eBadCRCBlock,
+    eFlashWriteError,
+    eAppliCheckError,
+    eBootSessionTimeout,
+    eBootSupportedReturnCode
 } teOperationRetVal;
 
 bool Bootloader_ProcessFile(FILE* FpHexFile, uint32_t Fu32FileSize);
@@ -69,5 +70,6 @@ bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version);
 bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf);
 bool Bootloader_TransferData(tsDataBlock* FptsDataBlock);
 bool Bootloader_RequestEraseFlash(void);
+bool Bootloader_RequestBootSession(uint16_t Fu16Timeout);
 
 #endif // BOOTLOADER_H_INCLUDED

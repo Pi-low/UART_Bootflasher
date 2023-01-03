@@ -7,8 +7,8 @@
 #define EXTENSION 256
 
 #ifdef DEBUG_CONFIG
-#define PRINT_DEBUG_TRACE 0u
-#define DEBUG_OFFLINE 1u
+#define PRINT_DEBUG_TRACE 1u
+#define DEBUG_OFFLINE 0u
 #else
 #define PRINT_DEBUG_TRACE 0u
 #define DEBUG_OFFLINE 0u
