@@ -10,8 +10,25 @@
 #include "Bootloader.h"
 
 static uint8_t spu8DataBuffer[ALLOCATION_SIZE + EXTENSION];
+static const char *spcErrCode[eBootSupportedReturnCode] =
+{
+    "Operation successful",
+    "Operation not available",
+    "Operation not allowed",
+    "Operation not fail",
+    "Bad frame checksum",
+    "Bad frame length",
+    "Unknown frame identifier",
+    "Frame timeout",
+    "Flash erase error",
+    "Incorrect block address",
+    "CRC block error",
+    "Flash write error",
+    "Application check error",
+    "Boot session timeout"
+};
 
-bool Bootloader_ProcessFile(FILE* FpHexFile, uint32_t Fu32FileSize)
+bool Bootloader_ProcessFile(FILE * FpHexFile, uint32_t Fu32FileSize)
 {
     bool RetVal = true;
     uint8_t* pu8LastData = NULL;
@@ -87,53 +104,7 @@ bool Bootloader_GetInfoFromiHexFile(FILE* FpHexFile, uint32_t Fu32FileSize)
 
 void Bootloader_PrintErrcode(uint8_t Fu8ErrCode)
 {
-    printf("[Target]: ");
-    switch(Fu8ErrCode)
-    {
-        case eOperationNotAvailable:
-            printf("Operation not available\r\n");
-            break;
-        case eOperationNotAllowed:
-            printf("Operation not allowed\r\n");
-            break;
-        case eOperationFail:
-            printf("Operation failed\r\n");
-            break;
-        case eBadChecksum:
-            printf("Bad frame checksum\r\n");
-            break;
-        case eBadFrameLength:
-            printf("Bad frame length\r\n");
-            break;
-        case eUnknownFrameID:
-            printf("Unknown frame identifier\r\n");
-            break;
-        case eFrameTimeout:
-            printf("Frame timeout\r\n");
-            break;
-        case eFlashEraseError:
-            printf("Flash erase error\r\n");
-            break;
-        case eBadBlockAddr:
-            printf("Bad block address\r\n");
-            break;
-        case eBadCRCBlock:
-            printf("Bad block CRC\r\n");
-            break;
-        case eFlashWriteError:
-            printf("Flash write error\r\n");
-            break;
-        case eAppliCheckError:
-            printf("Application check error\r\n");
-            break;
-        case eBootSessionTimeout:
-            printf("Boot session timeout\r\n");
-            break;
-        default:
-            printf("Unknown error code\r\n");
-            break;
-    }
-    printf("\r\n");
+    printf("[Target]: %s\r\n", spcErrCode[Fu8ErrCode]);
 }
 
 bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version)
@@ -143,8 +114,6 @@ bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version)
     tsSendMsg.u8ID = eService_getInfo;
     tsSendMsg.u16Length = 1;
     tsSendMsg.pu8Payload[0] = 1;
-
-    //printf("[Info]: Requesting SW version...\r\n");
 
     if (ComPort_SendGenericFrame(&tsSendMsg, 50) == true)
     {
@@ -189,7 +158,6 @@ bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf)
     tsSendMsg.pu8Payload[0] = 2;
 
     uint8_t* pu8Intern = NULL;
-    //printf("[Info]: Requesting SW info...\r\n");
 
     if (Fpu8Buf != NULL)
     {
@@ -317,8 +285,6 @@ bool Bootloader_RequestEraseFlash(void)
     tsSendMsg.u8ID = eService_eraseFlash;
     tsSendMsg.u16Length = 0;
 
-    printf("[Info]: Requesting flash erase...\r\n");
-
     if (ComPort_SendGenericFrame(&tsSendMsg, 7000) == true)
     {
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
@@ -347,8 +313,6 @@ bool Bootloader_RequestBootSession(uint16_t Fu16Timeout)
     tsSendMsg.u16Length = 2;
     tsSendMsg.pu8Payload[0] = (Fu16Timeout >> 8) & 0x00FF;
     tsSendMsg.pu8Payload[1] = Fu16Timeout & 0x00FF;
-
-    printf("[Info]: Requesting boot session...\r\n");
 
     if (ComPort_SendGenericFrame(&tsSendMsg, 50) == true)
     {
