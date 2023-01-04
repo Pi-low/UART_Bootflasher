@@ -4,3 +4,4 @@
 *.layout
 .vscode/
 bin/
+log.txt

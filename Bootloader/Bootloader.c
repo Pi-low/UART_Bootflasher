@@ -15,12 +15,13 @@ static const char *spcErrCode[eBootSupportedReturnCode] =
     "Operation successful",
     "Operation not available",
     "Operation not allowed",
-    "Operation not fail",
+    "Operation fail",
     "Bad frame checksum",
     "Bad frame length",
     "Unknown frame identifier",
     "Frame timeout",
     "Flash erase error",
+    "Flash memory not blanked",
     "Incorrect block address",
     "CRC block error",
     "Flash write error",
@@ -253,7 +254,7 @@ bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
 #endif
 
 #if PRINT_DEBUG_TRACE == 0
-    if (ComPort_SendGenericFrame(&tsSendMsg, 200) == true)
+    if (ComPort_SendGenericFrame(&tsSendMsg, 100) == true)
 #else
     if (ComPort_SendGenericFrame(&tsSendMsg, 25) == true)
 #endif

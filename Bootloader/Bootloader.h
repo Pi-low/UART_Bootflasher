@@ -55,6 +55,7 @@ typedef enum
     eUnknownFrameID,
     eFrameTimeout,
     eFlashEraseError,
+    eMemoryNotBlanked,
     eBadBlockAddr,
     eBadCRCBlock,
     eFlashWriteError,

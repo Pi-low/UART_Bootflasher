@@ -12,12 +12,13 @@ uint32_t main_GetFileSize(FILE* FpHexFile);
 int main(int argc, char * argv[])
 {
     uint8_t u8KeepLoop = 1;
-    FILE* MyFile;
+    FILE *MyFile, *LogStream;
     teMainStates teMainCurrentState = eStateSelectComPort;
     uint32_t u32TotalFileSize = 0;
     char* pcString = NULL;
     char pcBuffer[10];
     bool bTmp = true;
+    LogStream = fopen("log.txt", "w+");
     while (u8KeepLoop)
     {
         switch(teMainCurrentState)
@@ -25,6 +26,7 @@ int main(int argc, char * argv[])
             case eStateSelectComPort:
                 ComPort_Scan();
                 printf("Select port COM: \r\n");
+                fflush(stdin);
                 scanf("%[^\n]", pcBuffer);
                 if (ComPort_Open(pcBuffer))
                 {
@@ -32,7 +34,7 @@ int main(int argc, char * argv[])
                 }
                 else
                 {
-                    u8KeepLoop = 0;
+                    teMainCurrentState = eStateQuit;
                 }
             break;
 
@@ -70,7 +72,7 @@ int main(int argc, char * argv[])
                 else
                 {
                     printf("[Error]: Cannot open file, exit program !\r\n");
-                    u8KeepLoop = 0;
+                    teMainCurrentState = eStateQuit;
                 }
                 free(pcString);
 
@@ -84,12 +86,13 @@ int main(int argc, char * argv[])
                 if (bTmp)
                 {
                     teMainCurrentState = eStateFlashTarget;
+                    fflush(stdin);
                     system("PAUSE");
                 }
                 else
                 {
                     printf("[Error]: Abort operation !\r\n");
-                    u8KeepLoop = 0;
+                    teMainCurrentState = eStateQuit;
                 }
             break;
 
@@ -106,10 +109,25 @@ int main(int argc, char * argv[])
                     }
                     else
                     {
-                        printf("[INFO]: Abort operation !\r\n");
+                        printf("[Error]: Abort operation !\r\n");
                     }
                 }
-                u8KeepLoop = 0;
+                teMainCurrentState = eStateQuit;
+            break;
+
+            case eStateQuit:
+                ComPort_Close();
+                printf("Restart: y\r\nExit: n\r\n");
+                fflush(stdin);
+                scanf("%[^\n]", pcBuffer);
+                if (pcBuffer[0] == 'y')
+                {
+                    teMainCurrentState = eStateSelectComPort;
+                }
+                else
+                {
+                    u8KeepLoop = 0;
+                }
             break;
 
             default:
@@ -118,14 +136,15 @@ int main(int argc, char * argv[])
         }
     }
 
-    if (MyFile != NULL)
-    {
-        fclose(MyFile);
-    }
-    ComPort_Close();
-    #ifndef DEBUG_CONFIG
-system("PAUSE");
-    #endif // DEBUG_CONFIG
+if (MyFile != NULL)
+{
+    fclose(MyFile);
+}
+if (LogStream != NULL)
+{
+    fclose(LogStream);
+}
+ComPort_Close();
 return EXIT_SUCCESS;
 }
 
