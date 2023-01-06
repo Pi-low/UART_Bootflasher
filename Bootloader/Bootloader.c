@@ -7,6 +7,7 @@
 #include "../Intel_HEX_parser/ihex_parser/ihex_parser.h"
 #include "../ComPort/ComPort.h"
 #include "../Crc16/Crc16.h"
+#include "../Logger/Logger.h"
 #include "Bootloader.h"
 
 static uint8_t spu8DataBuffer[ALLOCATION_SIZE + EXTENSION];
@@ -116,6 +117,10 @@ bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version)
     tsSendMsg.u16Length = 1;
     tsSendMsg.pu8Payload[0] = 1;
 
+#if PRINT_DEBUG_TRACE == 1
+    printf("[Info]: Request SW version\r\n");
+#endif
+
     if (ComPort_SendGenericFrame(&tsSendMsg, 50) == true)
     {
 
@@ -160,13 +165,17 @@ bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf)
 
     uint8_t* pu8Intern = NULL;
 
+#if PRINT_DEBUG_TRACE == 1
+    printf("[Info]: Request SW info\r\n");
+#endif
+
     if (Fpu8Buf != NULL)
     {
         pu8Intern = Fpu8Buf;
     }
     else
     {
-        pu8Intern = malloc(64 * sizeof(uint8_t));
+        pu8Intern = malloc(128 * sizeof(uint8_t));
     }
 
     if (ComPort_SendGenericFrame(&tsSendMsg, 100) == true)
@@ -253,11 +262,7 @@ bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
     printf("[Sending block]: 0x%06X : %u (0x%02X%02X)\r\n", FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len, (uint8_t)u16Tmp, (uint8_t)(u16Tmp >> 8));
 #endif
 
-#if PRINT_DEBUG_TRACE == 0
-    if (ComPort_SendGenericFrame(&tsSendMsg, 100) == true)
-#else
-    if (ComPort_SendGenericFrame(&tsSendMsg, 25) == true)
-#endif
+    if (ComPort_SendGenericFrame(&tsSendMsg, 110) == true)
     {
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
         {
@@ -286,6 +291,8 @@ bool Bootloader_RequestEraseFlash(void)
     tsSendMsg.u8ID = eService_eraseFlash;
     tsSendMsg.u16Length = 0;
 
+    printf("[Info]: Request flash erase...\r\n");
+
     if (ComPort_SendGenericFrame(&tsSendMsg, 7000) == true)
     {
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
@@ -306,14 +313,16 @@ bool Bootloader_RequestEraseFlash(void)
     }
 }
 
-bool Bootloader_RequestBootSession(uint16_t Fu16Timeout)
+bool Bootloader_RequestBootSession(void)
 {
     tsFrame tsSendMsg;
 
     tsSendMsg.u8ID = eService_gotoBoot;
-    tsSendMsg.u16Length = 2;
-    tsSendMsg.pu8Payload[0] = (Fu16Timeout >> 8) & 0x00FF;
-    tsSendMsg.pu8Payload[1] = Fu16Timeout & 0x00FF;
+    tsSendMsg.u16Length = 0;
+
+#if PRINT_DEBUG_TRACE == 1
+    printf("[Info]: Request boot session\r\n");
+#endif
 
     if (ComPort_SendGenericFrame(&tsSendMsg, 50) == true)
     {
@@ -344,6 +353,10 @@ bool Bootloader_CheckFlash(uint16_t Fu16CRC, uint8_t Fu16AppFlashSize, uint16_t 
     tsSendMsg.pu8Payload[0] = (Fu16CRC >> 8) & 0x00FF;
     tsSendMsg.pu8Payload[1] = Fu16CRC & 0x00FF;
     tsSendMsg.pu8Payload[2] = Fu16AppFlashSize;
+
+#if PRINT_DEBUG_TRACE == 1
+    printf("[Info]: Request flash check\r\n");
+#endif
 
     if (ComPort_SendGenericFrame(&tsSendMsg, Fu16Timeout) == true)
     {

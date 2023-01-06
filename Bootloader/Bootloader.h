@@ -71,7 +71,7 @@ bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version);
 bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf);
 bool Bootloader_TransferData(tsDataBlock* FptsDataBlock);
 bool Bootloader_RequestEraseFlash(void);
-bool Bootloader_RequestBootSession(uint16_t Fu16Timeout);
+bool Bootloader_RequestBootSession(void);
 bool Bootloader_CheckFlash(uint16_t Fu16CRC, uint8_t Fu16AppFlashSize, uint16_t Fu16Timeout);
 
 #endif // BOOTLOADER_H_INCLUDED

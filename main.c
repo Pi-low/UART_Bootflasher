@@ -6,19 +6,19 @@
 #include "main.h"
 #include "Bootloader/Bootloader.h"
 #include "ComPort/ComPort.h"
+#include "Logger/Logger.h"
 
 uint32_t main_GetFileSize(FILE* FpHexFile);
 
 int main(int argc, char * argv[])
 {
     uint8_t u8KeepLoop = 1;
-    FILE *MyFile, *LogStream;
+    FILE *MyFile;
     teMainStates teMainCurrentState = eStateSelectComPort;
     uint32_t u32TotalFileSize = 0;
-    char* pcString = NULL;
+    char *pcString = NULL;
     char pcBuffer[10];
     bool bTmp = true;
-    LogStream = fopen("log.txt", "w+");
     while (u8KeepLoop)
     {
         switch(teMainCurrentState)
@@ -40,7 +40,7 @@ int main(int argc, char * argv[])
 
             case eStateSelectFile:
                 /* Catch filename argument */
-                if ((argc > 1) && (argv[1] != NULL))
+                if ((argc > 1) && (argv[1] != NULL) && (pcString == NULL))
                 {
                     pcString = argv[1];
                 }
@@ -62,27 +62,18 @@ int main(int argc, char * argv[])
                     printf("Open: \"%s\"\r\n", pcString);
                     u32TotalFileSize = main_GetFileSize(MyFile);
                     Bootloader_GetInfoFromiHexFile(MyFile, u32TotalFileSize);
-#if DEBUG_OFFLINE == 1
-                    teMainCurrentState = eStateFlashTarget;
-                    system("PAUSE");
-#else
                     teMainCurrentState = eStateTargetInfo;
-#endif // DEBUG_OFFLINE
                 }
                 else
                 {
                     printf("[Error]: Cannot open file, exit program !\r\n");
                     teMainCurrentState = eStateQuit;
                 }
-                free(pcString);
-
             break;
 
             case eStateTargetInfo:
-#if DEBUG_OFFLINE == 0
                 bTmp &= Bootloader_RequestSwVersion(NULL);
                 bTmp &= Bootloader_RequestSwInfo(NULL);
-#endif // DEBUG_OFFLINE
                 if (bTmp)
                 {
                     teMainCurrentState = eStateFlashTarget;
@@ -99,10 +90,8 @@ int main(int argc, char * argv[])
             case eStateFlashTarget:
                 if (MyFile != NULL)
                 {
-#if DEBUG_OFFLINE == 0
+                    bTmp &= Bootloader_RequestBootSession();
                     bTmp &= Bootloader_RequestEraseFlash();
-                    bTmp &= Bootloader_RequestBootSession(2000);
-#endif // DEBUG_OFFLINE
                     if (bTmp)
                     {
                         Bootloader_ProcessFile(MyFile, u32TotalFileSize);
@@ -116,17 +105,22 @@ int main(int argc, char * argv[])
             break;
 
             case eStateQuit:
-                ComPort_Close();
-                printf("Restart: y\r\nExit: n\r\n");
+
+                printf("Restart ? (y) : ");
                 fflush(stdin);
                 scanf("%[^\n]", pcBuffer);
                 if (pcBuffer[0] == 'y')
                 {
-                    teMainCurrentState = eStateSelectComPort;
+                    teMainCurrentState = eStateTargetInfo;
                 }
                 else
                 {
                     u8KeepLoop = 0;
+                    if (MyFile != NULL)
+                    {
+                        fclose(MyFile);
+                    }
+                    ComPort_Close();
                 }
             break;
 
@@ -135,16 +129,6 @@ int main(int argc, char * argv[])
             break;
         }
     }
-
-if (MyFile != NULL)
-{
-    fclose(MyFile);
-}
-if (LogStream != NULL)
-{
-    fclose(LogStream);
-}
-ComPort_Close();
 return EXIT_SUCCESS;
 }
 

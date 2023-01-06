@@ -48,7 +48,7 @@ void Core_InitDataBlockGen(void)
 bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
 {
     bool bRetVal = true;
-    uint16_t u16Cnt = 0, u16Cnt2 = 0;
+    uint16_t u16Cnt = 0;
     uint8_t pu8SaveData[BYTES_PER_BLOCK];
     uint8_t u8SaveLen = 0;
     uint32_t u32Fill = 0;
@@ -132,18 +132,19 @@ bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t F
     {
         /* Parsed address is over the current block */
         bRetVal &= Core_SendBlock(Fu32addr); /* send current block, reset block with parsed address */
-
-        for (u16Cnt = 0; u16Cnt < tsCurrentDatablock.u16Len; u16Cnt+=4)
+        u16Cnt = 0;
+        while (u16Cnt < tsCurrentDatablock.u16Len)
         {
             /* Fill FF parttern until reaching the start address */
             tsCurrentDatablock.pu8Data[u16Cnt] = 0xFF;
             tsCurrentDatablock.pu8Data[u16Cnt + 1] = 0xFF;
             tsCurrentDatablock.pu8Data[u16Cnt + 2] = 0xFF;
             tsCurrentDatablock.pu8Data[u16Cnt + 3] = 0; /* Phantom byte */
+            u16Cnt += 4;
         }
         for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
         {
-            tsCurrentDatablock.pu8Data[ tsCurrentDatablock.u16Len + u16Cnt] = *(Fpu8Buffer + u16Cnt);
+            tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len] = *(Fpu8Buffer + u16Cnt);
             tsCurrentDatablock.u16Len ++;
         }
     }
@@ -271,24 +272,15 @@ bool Core_SendBlock(uint32_t Fu32NewStartAddr)
    }
    else
    {
-       bRetVal = false;
+        bRetVal = false;
    }
 
    /* Prepare next block */
-   tsCurrentDatablock.u16CRCBlock = 0;
-   if (Fu32NewStartAddr % BYTES_PER_BLOCK == 0)
-   {
-       tsCurrentDatablock.u32StartAddr = Fu32NewStartAddr;
-       tsCurrentDatablock.u32EndAddr = tsCurrentDatablock.u32StartAddr + BYTES_PER_BLOCK;
-       tsCurrentDatablock.u16Len = 0;
-   }
-   else
-   {
-       u32OffsetAddr = Fu32NewStartAddr % (uint32_t)BYTES_PER_BLOCK;
-       tsCurrentDatablock.u32StartAddr = Fu32NewStartAddr - u32OffsetAddr;
-       tsCurrentDatablock.u32EndAddr = tsCurrentDatablock.u32StartAddr + (uint32_t)BYTES_PER_BLOCK;
-       tsCurrentDatablock.u16Len = u32OffsetAddr;
-   }
+    tsCurrentDatablock.u16CRCBlock = 0;
+    u32OffsetAddr = Fu32NewStartAddr % (uint32_t)BYTES_PER_BLOCK;
+    tsCurrentDatablock.u32StartAddr = Fu32NewStartAddr - u32OffsetAddr;
+    tsCurrentDatablock.u32EndAddr = tsCurrentDatablock.u32StartAddr + (uint32_t)BYTES_PER_BLOCK;
+    tsCurrentDatablock.u16Len = u32OffsetAddr;
 
    return bRetVal;
 }

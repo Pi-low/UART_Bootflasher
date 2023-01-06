@@ -53,6 +53,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="Intel_HEX_parser/ihex_parser/ihex_parser.h" />
+		<Unit filename="Logger/Logger.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Logger/Logger.h" />
 		<Unit filename="RS-232/rs232.c">
 			<Option compilerVar="CC" />
 		</Unit>
