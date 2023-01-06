@@ -334,3 +334,33 @@ bool Bootloader_RequestBootSession(uint16_t Fu16Timeout)
         return false;
     }
 }
+
+bool Bootloader_CheckFlash(uint16_t Fu16CRC, uint8_t Fu16AppFlashSize, uint16_t Fu16Timeout)
+{
+    tsFrame tsSendMsg;
+
+    tsSendMsg.u8ID = eService_checkFlash;
+    tsSendMsg.u16Length = 5;
+    tsSendMsg.pu8Payload[0] = (Fu16CRC >> 8) & 0x00FF;
+    tsSendMsg.pu8Payload[1] = Fu16CRC & 0x00FF;
+    tsSendMsg.pu8Payload[2] = Fu16AppFlashSize;
+
+    if (ComPort_SendGenericFrame(&tsSendMsg, Fu16Timeout) == true)
+    {
+        if (tsSendMsg.pu8Response[0] == eOperationSuccess)
+        {
+            printf("[Target]: Flash memory checked!\r\n");
+            return true;
+        }
+        else
+        {
+            Bootloader_PrintErrcode(tsSendMsg.pu8Response[0]);
+            return false;
+        }
+    }
+    else
+    {
+        printf("[Error]: No response from target!\r\n");
+        return false;
+    }
+}

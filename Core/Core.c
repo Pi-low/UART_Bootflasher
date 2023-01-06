@@ -16,6 +16,7 @@ static uint8_t pu8Buff[256];
 static uint16_t u16BufLen = 0;
 static uint8_t pu8Saved[EXTENSION];
 static uint32_t su32SavedLen = 0;
+static uint16_t su16CRCFlash = 0;
 
 /* ------------------------------------------------------------ */
 /* Static functions declaration                                 */
@@ -47,7 +48,7 @@ void Core_InitDataBlockGen(void)
 bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
 {
     bool bRetVal = true;
-    uint16_t u16Cnt = 0;
+    uint16_t u16Cnt = 0, u16Cnt2 = 0;
     uint8_t pu8SaveData[BYTES_PER_BLOCK];
     uint8_t u8SaveLen = 0;
     uint32_t u32Fill = 0;
@@ -131,10 +132,18 @@ bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t F
     {
         /* Parsed address is over the current block */
         bRetVal &= Core_SendBlock(Fu32addr); /* send current block, reset block with parsed address */
+
+        for (u16Cnt = 0; u16Cnt < tsCurrentDatablock.u16Len; u16Cnt+=4)
+        {
+            /* Fill FF parttern until reaching the start address */
+            tsCurrentDatablock.pu8Data[u16Cnt] = 0xFF;
+            tsCurrentDatablock.pu8Data[u16Cnt + 1] = 0xFF;
+            tsCurrentDatablock.pu8Data[u16Cnt + 2] = 0xFF;
+            tsCurrentDatablock.pu8Data[u16Cnt + 3] = 0; /* Phantom byte */
+        }
         for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
         {
-            /* Append datablock */
-            tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len] = *(Fpu8Buffer + u16Cnt);
+            tsCurrentDatablock.pu8Data[ tsCurrentDatablock.u16Len + u16Cnt] = *(Fpu8Buffer + u16Cnt);
             tsCurrentDatablock.u16Len ++;
         }
     }
@@ -278,7 +287,7 @@ bool Core_SendBlock(uint32_t Fu32NewStartAddr)
        u32OffsetAddr = Fu32NewStartAddr % (uint32_t)BYTES_PER_BLOCK;
        tsCurrentDatablock.u32StartAddr = Fu32NewStartAddr - u32OffsetAddr;
        tsCurrentDatablock.u32EndAddr = tsCurrentDatablock.u32StartAddr + (uint32_t)BYTES_PER_BLOCK;
-       tsCurrentDatablock.u16Len = 0;
+       tsCurrentDatablock.u16Len = u32OffsetAddr;
    }
 
    return bRetVal;
