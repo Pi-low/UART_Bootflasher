@@ -169,7 +169,7 @@ bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf)
         pu8Intern = malloc(64 * sizeof(uint8_t));
     }
 
-    if (ComPort_SendGenericFrame(&tsSendMsg, 50) == true)
+    if (ComPort_SendGenericFrame(&tsSendMsg, 100) == true)
     {
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
         {
@@ -179,7 +179,7 @@ bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf)
             }
             else
             {
-                memcpy(pu8Intern, &tsSendMsg.pu8Response[1], 64);
+                memcpy(pu8Intern, &tsSendMsg.pu8Response[1], 128);
                 printf("[Target SW Info]: %s\r\n", pu8Intern);
             }
             return true;
