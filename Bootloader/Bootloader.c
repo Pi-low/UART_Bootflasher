@@ -11,6 +11,10 @@
 #include "Bootloader.h"
 
 static uint8_t spu8DataBuffer[ALLOCATION_SIZE + EXTENSION];
+static uint16_t su16CRCFlash = 0;
+static uint32_t su32CurFlashAddr = 0;
+static uint16_t su16CRCBlockCnt = 0;
+static uint8_t u8EndFlashFlag = 0;
 static const char *spcErrCode[eBootSupportedReturnCode] =
 {
     "Operation successful",
@@ -298,6 +302,10 @@ bool Bootloader_RequestEraseFlash(void)
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
         {
             printf("[Target]: Flash memory erased!\r\n");
+            su16CRCFlash = 0;
+            su32CurFlashAddr = 0;
+            su16CRCBlockCnt = 0;
+            u8EndFlashFlag = 0;
             return true;
         }
         else
@@ -344,36 +352,119 @@ bool Bootloader_RequestBootSession(void)
     }
 }
 
-bool Bootloader_CheckFlash(uint16_t Fu16CRC, uint8_t Fu16AppFlashSize, uint16_t Fu16Timeout)
+bool Bootloader_CheckFlash(void)
 {
     tsFrame tsSendMsg;
-
+    uint16_t u16CRC = su16CRCFlash ^ 0xFFFF;
     tsSendMsg.u8ID = eService_checkFlash;
-    tsSendMsg.u16Length = 5;
-    tsSendMsg.pu8Payload[0] = (Fu16CRC >> 8) & 0x00FF;
-    tsSendMsg.pu8Payload[1] = Fu16CRC & 0x00FF;
-    tsSendMsg.pu8Payload[2] = Fu16AppFlashSize;
+    tsSendMsg.u16Length = 4;
+    tsSendMsg.pu8Payload[0] = u16CRC & 0x00FF;
+    tsSendMsg.pu8Payload[1] = (u16CRC >> 8) & 0x00FF;
+    tsSendMsg.pu8Payload[2] = (su16CRCBlockCnt >> 8) & 0x00FF;
+    tsSendMsg.pu8Payload[3] = su16CRCBlockCnt & 0x00FF;
 
-#if PRINT_DEBUG_TRACE == 1
-    printf("[Info]: Request flash check\r\n");
-#endif
+        printf("[Info]: Request flash check\r\n");
 
-    if (ComPort_SendGenericFrame(&tsSendMsg, Fu16Timeout) == true)
-    {
-        if (tsSendMsg.pu8Response[0] == eOperationSuccess)
+        if (ComPort_SendGenericFrame(&tsSendMsg, 5000) == true)
         {
-            printf("[Target]: Flash memory checked!\r\n");
-            return true;
+            if (tsSendMsg.pu8Response[0] == eOperationSuccess)
+            {
+                printf("[Target]: Flash memory checked!\r\n");
+                return true;
+            }
+            else
+            {
+                Bootloader_PrintErrcode(tsSendMsg.pu8Response[0]);
+                return false;
+            }
         }
         else
         {
-            Bootloader_PrintErrcode(tsSendMsg.pu8Response[0]);
+            printf("[Error]: No response from target!\r\n");
             return false;
         }
-    }
-    else
+}
+
+void Bootloader_ManageFlashCRC(tsDataBlock* FptsDataBlock)
+{
+    uint32_t u32Addr = FptsDataBlock->u32StartAddr;
+    uint8_t *pu8Data = FptsDataBlock->pu8Data;
+    uint16_t u16Len = FptsDataBlock->u16Len;
+    uint32_t u32AddrGap = 0;
+    uint32_t u32Cnt = 0;
+    uint8_t pu8BlankWord[4] = {0xff, 0xff, 0xff, 0x00};
+    if (su32CurFlashAddr == u32Addr)
     {
-        printf("[Error]: No response from target!\r\n");
-        return false;
+        /* Aligned block */
+        while (u16Len < BYTES_PER_BLOCK)
+        {
+            *(pu8Data + u16Len) = 0xFF;
+            *(pu8Data + u16Len + 1) = 0xFF;
+            *(pu8Data + u16Len + 2) = 0xFF;
+            *(pu8Data + u16Len + 3) = 0x00;
+            u16Len += 4;
+        }
+        su32CurFlashAddr = u32Addr + BYTES_PER_BLOCK;
+        if (u32Addr == 0x00000000)
+        {
+            Crc16_BufferUpdate(&su16CRCFlash, pu8BlankWord, 4);
+            Crc16_BufferUpdate(&su16CRCFlash, pu8BlankWord, 4);
+            pu8Data += 8;
+            Crc16_BufferUpdate(&su16CRCFlash, pu8Data, BYTES_PER_BLOCK - 8);
+        }
+        else
+        {
+            Crc16_BufferUpdate(&su16CRCFlash, pu8Data, BYTES_PER_BLOCK);
+        }
+        if (u32Addr >= ADDR_START_APPLI)
+        {
+            su16CRCBlockCnt++;
+        }
     }
+    else if (su32CurFlashAddr < u32Addr)
+    {
+        if (u32Addr == ADDR_START_APPLI)
+        {
+            u32AddrGap = ADDR_START_BOOT - su32CurFlashAddr;
+        }
+        else
+        {
+            u32AddrGap = u32Addr - su32CurFlashAddr;
+            if (u32Addr > ADDR_START_APPLI)
+            {
+                su16CRCBlockCnt += (u32AddrGap / BYTES_PER_BLOCK);
+            }
+        }
+        /* Unaligned block, gap fill before computing current block */
+        if ((u32AddrGap % BYTES_PER_BLOCK) == 0)
+        {
+            while (u32Cnt < u32AddrGap)
+            {
+                Crc16_BufferUpdate(&su16CRCFlash, pu8BlankWord, 4);
+                u32Cnt += 4;
+            }
+           
+        }
+
+        /* Blank remaining data in the current block */
+        while (u16Len < BYTES_PER_BLOCK)
+        {
+            *(pu8Data + u16Len) = 0xFF;
+            *(pu8Data + u16Len + 1) = 0xFF;
+            *(pu8Data + u16Len + 2) = 0xFF;
+            *(pu8Data + u16Len + 3) = 0x00;
+            u16Len += 4;
+        }
+        if (u32Addr >= ADDR_START_APPLI)
+        {
+            su16CRCBlockCnt++;
+        }
+        Crc16_BufferUpdate(&su16CRCFlash, pu8Data, BYTES_PER_BLOCK);
+        su32CurFlashAddr = u32Addr + BYTES_PER_BLOCK;
+    }
+}
+
+void Bootloader_NotifyEndFlash(void)
+{
+    u8EndFlashFlag = 1;
 }

@@ -95,6 +95,7 @@ int main(int argc, char * argv[])
                     if (bTmp)
                     {
                         Bootloader_ProcessFile(MyFile, u32TotalFileSize);
+                        Bootloader_CheckFlash();
                     }
                     else
                     {

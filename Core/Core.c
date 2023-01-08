@@ -16,7 +16,6 @@ static uint8_t pu8Buff[256];
 static uint16_t u16BufLen = 0;
 static uint8_t pu8Saved[EXTENSION];
 static uint32_t su32SavedLen = 0;
-static uint16_t su16CRCFlash = 0;
 
 /* ------------------------------------------------------------ */
 /* Static functions declaration                                 */
@@ -52,11 +51,6 @@ bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t F
     uint8_t pu8SaveData[BYTES_PER_BLOCK];
     uint8_t u8SaveLen = 0;
     uint32_t u32Fill = 0;
-
-    if (Fpu8Buffer == NULL) /* Shall be used to send the last block which size is below 256 */
-    {
-        bRetVal &= Core_SendBlock(0xFFFFFF00);
-    }
 
     if ((Fu32addr >= tsCurrentDatablock.u32StartAddr) && (Fu32addr < tsCurrentDatablock.u32EndAddr))
     {
@@ -266,6 +260,7 @@ bool Core_SendBlock(uint32_t Fu32NewStartAddr)
    if (Fu32NewStartAddr < ADDR_APPL_END)
    {
         bRetVal = Bootloader_TransferData(&tsCurrentDatablock);
+        Bootloader_ManageFlashCRC(&tsCurrentDatablock);
 #ifdef DEBUG_CONFIG
         bRetVal = true;
 #endif
@@ -273,6 +268,7 @@ bool Core_SendBlock(uint32_t Fu32NewStartAddr)
    else
    {
         bRetVal = false;
+        Bootloader_NotifyEndFlash();
    }
 
    /* Prepare next block */

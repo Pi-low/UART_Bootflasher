@@ -10,6 +10,7 @@
 #define MAX_FRAME_LENGTH    262
 #define BYTES_PER_BLOCK     256 /* which correspond to a flash row size in byte */
 #define APPL_DESC_LEN       128
+#define ADDR_START_BOOT     (0x400L << 1)
 #define ADDR_START_APPLI    (0x4000L << 1)
 #define ADDR_APPL_DESC      (0x280L << 1)
 #define ADDR_APPL_VERSION   (0x300L << 1)
@@ -72,6 +73,8 @@ bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf);
 bool Bootloader_TransferData(tsDataBlock* FptsDataBlock);
 bool Bootloader_RequestEraseFlash(void);
 bool Bootloader_RequestBootSession(void);
-bool Bootloader_CheckFlash(uint16_t Fu16CRC, uint8_t Fu16AppFlashSize, uint16_t Fu16Timeout);
+bool Bootloader_CheckFlash(void);
+void Bootloader_ManageFlashCRC(tsDataBlock* FptsDataBlock);
+void Bootloader_NotifyEndFlash(void);
 
 #endif // BOOTLOADER_H_INCLUDED
