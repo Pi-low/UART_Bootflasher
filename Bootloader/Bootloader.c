@@ -432,3 +432,24 @@ void Bootloader_NotifyEndFlash(void)
 {
     u8EndFlashFlag = 1;
 }
+
+void Bootloader_ManageCrcData(tsDataBlock* FptsDataBlock)
+{
+    uint16_t u16Cnt;
+    uint16_t u16Tmp;
+#if (PRINT_DEBUG_TRACE == 1) && (PRINT_BLOCK_CRC == 1)
+    printf("[CRC]: Block %u: 0x%06X (%u)\r\n", su16CRCBlockCnt, FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len);
+    for (u16Cnt = 0; u16Cnt < FptsDataBlock->u16Len; u16Cnt++)
+    {
+        if ((u16Cnt % 32) == 0)
+        {
+            printf("\r\n ");
+        }
+        printf("%02X ", FptsDataBlock->pu8Data[u16Cnt]);
+    }
+    printf("\r\n");
+#endif
+    Crc16_BufferUpdate(&su16CRCFlash, FptsDataBlock->pu8Data, FptsDataBlock->u16Len);
+
+    su16CRCBlockCnt++;
+}

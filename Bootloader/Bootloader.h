@@ -75,5 +75,6 @@ bool Bootloader_RequestEraseFlash(void);
 bool Bootloader_RequestBootSession(void);
 bool Bootloader_CheckFlash(void);
 void Bootloader_NotifyEndFlash(void);
+void Bootloader_ManageCrcData(tsDataBlock* FptsDataBlock);
 
 #endif // BOOTLOADER_H_INCLUDED
