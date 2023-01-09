@@ -8,6 +8,7 @@
 /* Static variables declaration                                 */
 /* ------------------------------------------------------------ */
 static tsDataBlock tsCurrentDatablock;
+static tsDataBlock tsCRCDatablock;
 
 static uint8_t pu8LogisticData[128];
 static uint8_t u8SwMajor = 0;
@@ -42,6 +43,13 @@ void Core_InitDataBlockGen(void)
     tsCurrentDatablock.u32EndAddr = BYTES_PER_BLOCK;
     tsCurrentDatablock.u16Len = 0;
     su32SavedLen = 0;
+}
+
+void Core_InitCRCBlockGen(void)
+{
+    tsCRCDatablock.u32StartAddr = 0;
+    tsCRCDatablock.u32EndAddr = BYTES_PER_BLOCK;
+    tsCRCDatablock.u16Len = 0;
 }
 
 bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
@@ -189,7 +197,12 @@ bool Core_CbFetchLogisticData(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint
     return bRetVal;
 }
 
-void Core_PreParse(uint8_t* Fpu8Buffer, uint32_t* Fpu32Len)
+bool Core_CbManageCRCBlock(uint32_t Fu32addr, const uint8_t *Fpu8Buffer, uint8_t Fu8Size)
+{
+    return true;
+}
+
+void Core_PreParse(uint8_t *Fpu8Buffer, uint32_t *Fpu32Len)
 {
     uint32_t u32Index = 0;
     uint32_t u32PrevLineStart = 0;
@@ -262,11 +275,6 @@ bool Core_SendBlock(uint32_t Fu32NewStartAddr)
    uint32_t u32OffsetAddr = 0;
    /* Send the block */
     bRetVal = Bootloader_TransferData(&tsCurrentDatablock);
-    Bootloader_ManageFlashCRC(&tsCurrentDatablock);
-    
-#ifdef DEBUG_CONFIG
-        bRetVal = true;
-#endif
 
    /* Prepare next block */
     tsCurrentDatablock.u16CRCBlock = 0;
