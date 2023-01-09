@@ -51,7 +51,11 @@ bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t F
     uint8_t pu8SaveData[BYTES_PER_BLOCK];
     uint8_t u8SaveLen = 0;
     uint32_t u32Fill = 0;
-
+    if (Fpu8Buffer == NULL)
+    {
+        Core_SendBlock(0xFFFFFF00);
+        return false;
+    }
     if ((Fu32addr >= tsCurrentDatablock.u32StartAddr) && (Fu32addr < tsCurrentDatablock.u32EndAddr))
     {
         /* Parsed address is withing the current block */
@@ -122,7 +126,7 @@ bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t F
 
         }
     }
-    else if((Fu32addr >= tsCurrentDatablock.u32EndAddr) && (Fu32addr < ADDR_APPL_END))
+    else if(Fu32addr >= tsCurrentDatablock.u32EndAddr)
     {
         /* Parsed address is over the current block */
         bRetVal &= Core_SendBlock(Fu32addr); /* send current block, reset block with parsed address */
@@ -257,19 +261,12 @@ bool Core_SendBlock(uint32_t Fu32NewStartAddr)
    bool bRetVal = true;
    uint32_t u32OffsetAddr = 0;
    /* Send the block */
-   if (Fu32NewStartAddr < ADDR_APPL_END)
-   {
-        bRetVal = Bootloader_TransferData(&tsCurrentDatablock);
-        Bootloader_ManageFlashCRC(&tsCurrentDatablock);
+    bRetVal = Bootloader_TransferData(&tsCurrentDatablock);
+    Bootloader_ManageFlashCRC(&tsCurrentDatablock);
+    
 #ifdef DEBUG_CONFIG
         bRetVal = true;
 #endif
-   }
-   else
-   {
-        bRetVal = false;
-        Bootloader_NotifyEndFlash();
-   }
 
    /* Prepare next block */
     tsCurrentDatablock.u16CRCBlock = 0;

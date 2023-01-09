@@ -14,7 +14,11 @@ int main(int argc, char * argv[])
 {
     uint8_t u8KeepLoop = 1;
     FILE *MyFile;
+#if SEND_UART == 1
     teMainStates teMainCurrentState = eStateSelectComPort;
+#else
+    teMainStates teMainCurrentState = eStateSelectFile;
+#endif
     uint32_t u32TotalFileSize = 0;
     char *pcString = NULL;
     char pcBuffer[10];

@@ -54,10 +54,11 @@ bool Bootloader_ProcessFile(FILE * FpHexFile, uint32_t Fu32FileSize)
             u32DataCnt += u32Read;
 
             Core_PreParse(spu8DataBuffer, &u32Read);
-#if PRINT_DEBUG_TRACE == 1
-            printf("Read %u:\r\n", u32Read);
-#endif // PRINT_DEBUG_TRACE
             RetVal &= ihex_parser(spu8DataBuffer, u32Read);
+#if PRINT_DEBUG_TRACE == 1
+            printf("[Read %u] parsed:%u\r\n", u32Read, RetVal);
+#endif // PRINT_DEBUG_TRACE
+
         }
         else
         {
@@ -73,10 +74,12 @@ bool Bootloader_ProcessFile(FILE * FpHexFile, uint32_t Fu32FileSize)
                 pu8LastData += u32Read - u32Remain;
 
                 Core_PreParse(pu8LastData, &u32Remain);
-#if PRINT_DEBUG_TRACE == 1
-                printf("Read %u(%u): ", u32Read, u32Remain);
-#endif // PRINT_DEBUG_TRACE
                 RetVal &= ihex_parser(pu8LastData, u32Remain);
+#if PRINT_DEBUG_TRACE == 1
+                printf("[Read %u(%u)] parsed:%u\r\n", u32Read, u32Remain, RetVal);
+#endif // PRINT_DEBUG_TRACE
+                Core_CbDataBlockGen(0, NULL, 0);
+                Bootloader_NotifyEndFlash();
             }
             else
             {
@@ -124,7 +127,7 @@ bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version)
 #if PRINT_DEBUG_TRACE == 1
     printf("[Info]: Request SW version\r\n");
 #endif
-
+#if SEND_UART == 1
     if (ComPort_SendGenericFrame(&tsSendMsg, 50) == true)
     {
 
@@ -157,6 +160,9 @@ bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version)
         printf("[Error]: No response from target!\r\n");
         return false;
     }
+#else
+    return true;
+#endif
 }
 
 bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf)
@@ -172,7 +178,7 @@ bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf)
 #if PRINT_DEBUG_TRACE == 1
     printf("[Info]: Request SW info\r\n");
 #endif
-
+#if SEND_UART == 1
     if (Fpu8Buf != NULL)
     {
         pu8Intern = Fpu8Buf;
@@ -208,6 +214,9 @@ bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf)
         printf("[Error]: No response from target!\r\n");
         return false;
     }
+#else
+    return true;
+#endif
 }
 
 bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
@@ -217,6 +226,13 @@ bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
     uint8_t* pu8FrameData = tsSendMsg.pu8Payload;
     uint16_t* pu16CRC = &FptsDataBlock->u16CRCBlock;
     uint16_t u16Cnt = 0, u16Tmp = 0;
+
+    if (FptsDataBlock->u32StartAddr >= ADDR_APPL_END)
+    {
+        printf("[Info]: Address out of range, end flash\r\n");
+        return false;
+    }
+    /* Load block length */
 
     tsSendMsg.u16Length = FptsDataBlock->u16Len + 5;
     tsSendMsg.u8ID = eService_dataTransfer;
@@ -242,12 +258,29 @@ bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
    /* Reverse CRC16 MSB/LSB */
    *(pu8FrameData) = u16Tmp & 0x00FF;
    *(pu8FrameData + 1) = (u16Tmp >> 8) & 0x00FF;
-
 #if PRINT_DEBUG_TRACE == 1
-    for (u16Cnt = 0; u16Cnt < tsSendMsg.u16Length; u16Cnt++)
+#if PRINT_BLOCK_RAW == 1
+    printf("\r\n[BLOCK ADDR: 0x%06X, LEN: %d, CRC: 0x%02X%02X]:",
+          FptsDataBlock->u32StartAddr,
+          FptsDataBlock->u16Len,
+          (uint8_t)u16Tmp,
+          (uint8_t)(u16Tmp >> 8));
+
+    for (u16Cnt = 0; u16Cnt < FptsDataBlock->u16Len; u16Cnt++)
     {
-        if ((u16Cnt % 32) == 0)
+        if (u16Cnt % 32 == 0)
         {
+            printf("\r\n ");
+        }
+        printf("%02X ", FptsDataBlock->pu8Data[u16Cnt]);
+    }
+    printf("\r\n");
+#endif
+#if PRINT_BLOCK_UART == 1
+   for (u16Cnt = 0; u16Cnt < tsSendMsg.u16Length; u16Cnt++)
+   {
+       if ((u16Cnt % 32) == 0)
+       {
             printf("\r\n ");
         }
         if ((u16Cnt == 0) || (u16Cnt == (tsSendMsg.u16Length - 2)))
@@ -262,10 +295,12 @@ bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
         printf(" ");
     }
     printf("\r\n");
+#endif
+
 #else
     printf("[Sending block]: 0x%06X : %u (0x%02X%02X)\r\n", FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len, (uint8_t)u16Tmp, (uint8_t)(u16Tmp >> 8));
 #endif
-
+#if SEND_UART == 1
     if (ComPort_SendGenericFrame(&tsSendMsg, 110) == true)
     {
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
@@ -284,7 +319,7 @@ bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
         bRetVal = false;
         printf("[Error]: No response from target!\r\n");
     }
-
+#endif
     return bRetVal;
 }
 
@@ -296,7 +331,7 @@ bool Bootloader_RequestEraseFlash(void)
     tsSendMsg.u16Length = 0;
 
     printf("[Info]: Request flash erase...\r\n");
-
+#if SEND_UART == 1
     if (ComPort_SendGenericFrame(&tsSendMsg, 7000) == true)
     {
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
@@ -319,6 +354,9 @@ bool Bootloader_RequestEraseFlash(void)
         printf("[Error]: No response from target!\r\n");
         return false;
     }
+#else
+    return true;
+#endif
 }
 
 bool Bootloader_RequestBootSession(void)
@@ -328,10 +366,9 @@ bool Bootloader_RequestBootSession(void)
     tsSendMsg.u8ID = eService_gotoBoot;
     tsSendMsg.u16Length = 0;
 
-#if PRINT_DEBUG_TRACE == 1
-    printf("[Info]: Request boot session\r\n");
-#endif
 
+    printf("[Info]: Request boot session\r\n");
+#if SEND_UART == 1
     if (ComPort_SendGenericFrame(&tsSendMsg, 50) == true)
     {
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
@@ -350,6 +387,9 @@ bool Bootloader_RequestBootSession(void)
         printf("[Error]: No response from target!\r\n");
         return false;
     }
+#else
+    return true;
+#endif
 }
 
 bool Bootloader_CheckFlash(void)
@@ -363,8 +403,8 @@ bool Bootloader_CheckFlash(void)
     tsSendMsg.pu8Payload[2] = (su16CRCBlockCnt >> 8) & 0x00FF;
     tsSendMsg.pu8Payload[3] = su16CRCBlockCnt & 0x00FF;
 
-        printf("[Info]: Request flash check\r\n");
-
+        printf("[Info]: Request flash check (CRC: 0x%02X%02X)\r\n", tsSendMsg.pu8Payload[0], tsSendMsg.pu8Payload[1]);
+#if SEND_UART == 1
         if (ComPort_SendGenericFrame(&tsSendMsg, 5000) == true)
         {
             if (tsSendMsg.pu8Response[0] == eOperationSuccess)
@@ -383,6 +423,9 @@ bool Bootloader_CheckFlash(void)
             printf("[Error]: No response from target!\r\n");
             return false;
         }
+#else
+    return true;
+#endif
 }
 
 void Bootloader_ManageFlashCRC(tsDataBlock* FptsDataBlock)
@@ -443,7 +486,7 @@ void Bootloader_ManageFlashCRC(tsDataBlock* FptsDataBlock)
                 Crc16_BufferUpdate(&su16CRCFlash, pu8BlankWord, 4);
                 u32Cnt += 4;
             }
-           
+
         }
 
         /* Blank remaining data in the current block */
