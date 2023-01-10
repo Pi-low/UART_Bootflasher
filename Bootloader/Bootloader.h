@@ -23,6 +23,7 @@ typedef struct
     uint16_t u16Len;
     uint8_t pu8Data[BYTES_PER_BLOCK];
     uint16_t u16CRCBlock;
+    uint16_t u16BlockCnt;
 } tsDataBlock;
 
 typedef struct

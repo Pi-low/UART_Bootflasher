@@ -7,6 +7,7 @@
 /* ------------------------------------------------------------ */
 /* Static variables declaration                                 */
 /* ------------------------------------------------------------ */
+const static uint8_t Pu8BlankWord[4] = {0xFF, 0xFF, 0xFF, 0x00};
 static tsDataBlock tsCurrentDatablock;
 static tsDataBlock tsCRCDatablock;
 
@@ -92,10 +93,7 @@ bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t F
             u32Fill = Fu32addr - (tsCurrentDatablock.u32StartAddr + tsCurrentDatablock.u16Len);
             while (u16Cnt < u32Fill)
             {
-                tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len] = 0xFF;
-                tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len + 1] = 0xFF;
-                tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len + 2] = 0xFF;
-                tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len + 3] = 0; /* Phantom byte */
+                memcpy(&tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len], Pu8BlankWord, 4);
                 u16Cnt += 4;
                 tsCurrentDatablock.u16Len += 4;
             }
@@ -141,11 +139,7 @@ bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t F
         u16Cnt = 0;
         while (u16Cnt < tsCurrentDatablock.u16Len)
         {
-            /* Fill FF parttern until reaching the start address */
-            tsCurrentDatablock.pu8Data[u16Cnt] = 0xFF;
-            tsCurrentDatablock.pu8Data[u16Cnt + 1] = 0xFF;
-            tsCurrentDatablock.pu8Data[u16Cnt + 2] = 0xFF;
-            tsCurrentDatablock.pu8Data[u16Cnt + 3] = 0; /* Phantom byte */
+            memcpy(&tsCurrentDatablock.pu8Data[u16Cnt], Pu8BlankWord, 4);
             u16Cnt += 4;
         }
         for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
@@ -195,50 +189,6 @@ bool Core_CbFetchLogisticData(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint
         bRetVal = false;
     }
     return bRetVal;
-}
-
-bool Core_CbManageCRCBlock(uint32_t Fu32addr, const uint8_t *Fpu8Buffer, uint8_t Fu8Size)
-{
-    static uint32_t u32PrevAddr = 0;
-    uint16_t u16Cnt = 0;
-    if ((Fu32addr >= tsCRCDatablock.u32StartAddr) && (Fu32addr < tsCRCDatablock.u32EndAddr))
-    {
-        for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
-        {
-            tsCRCDatablock.pu8Data[tsCRCDatablock.u16Len] = *(Fpu8Buffer + u16Cnt);
-            tsCRCDatablock.u16Len ++;
-        }
-        if (tsCRCDatablock.u16Len == BYTES_PER_BLOCK)
-        {
-            /* Calculate full block CRC */
-            Bootloader_ManageCrcData(&tsCRCDatablock);
-            
-            /* Initialize next block */
-            tsCRCDatablock.u32StartAddr += BYTES_PER_BLOCK;
-            tsCRCDatablock.u32EndAddr = tsCRCDatablock.u32StartAddr + BYTES_PER_BLOCK;
-            tsCRCDatablock.u16Len = 0;
-        }
-    }
-    else if ((Fu32addr >= tsCRCDatablock.u32EndAddr) && (tsCRCDatablock.u16Len < BYTES_PER_BLOCK))
-    {
-        /* fill blank */
-        while (tsCRCDatablock.u16Len < BYTES_PER_BLOCK)
-        {
-            tsCRCDatablock.pu8Data[tsCRCDatablock.u16Len] = 0xFF;
-            tsCRCDatablock.pu8Data[tsCRCDatablock.u16Len + 1] = 0xFF;
-            tsCRCDatablock.pu8Data[tsCRCDatablock.u16Len + 2] = 0xFF;
-            tsCRCDatablock.pu8Data[tsCRCDatablock.u16Len + 3] = 0x00;
-            tsCRCDatablock.u16Len += 4;
-        }
-        /* Calculate previous block CRC */
-        Bootloader_ManageCrcData(&tsCRCDatablock);
-
-        /* Initialize next block */
-        tsCRCDatablock.u32StartAddr += BYTES_PER_BLOCK;
-        tsCRCDatablock.u32EndAddr = tsCRCDatablock.u32StartAddr + BYTES_PER_BLOCK;
-        tsCRCDatablock.u16Len = 0;
-    }
-    return true;
 }
 
 void Core_PreParse(uint8_t *Fpu8Buffer, uint32_t *Fpu32Len)
