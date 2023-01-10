@@ -264,8 +264,9 @@ bool Core_SendBlock(uint32_t Fu32NewStartAddr)
    uint32_t u32OffsetAddr = 0;
    /* Send the block */
     bRetVal = Bootloader_TransferData(&tsCurrentDatablock);
+    Core_ManageCrcBlock(&tsCurrentDatablock);
 
-   /* Prepare next block */
+    /* Prepare next block */
     tsCurrentDatablock.u16CRCBlock = 0;
     u32OffsetAddr = Fu32NewStartAddr % (uint32_t)BYTES_PER_BLOCK;
     tsCurrentDatablock.u32StartAddr = Fu32NewStartAddr - u32OffsetAddr;
@@ -275,7 +276,63 @@ bool Core_SendBlock(uint32_t Fu32NewStartAddr)
    return bRetVal;
 }
 
-void Core_FormatDecription(void)
+void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
+{
+    static uint32_t u32PrevAddr = 0;
+    uint32_t u32CurStartAddr = FptsDataBlock->u32StartAddr;
+    tsDataBlock *pBlock = FptsDataBlock;
+    tsDataBlock tsSavedBlock;
+    uint8_t *Pu8Data = FptsDataBlock->pu8Data;
+    uint16_t u16Cnt = 0;
+    /* Fill end of current block */
+    while (pBlock->u16Len < BYTES_PER_BLOCK)
+    {
+        memcpy(Pu8Data + pBlock->u16Len, Pu8BlankWord, 4);
+        pBlock->u16Len += 4;
+    }
+
+    if (pBlock->u32StartAddr == 0)
+    {
+        /* In cas block address = 0, blanck the 2 first instructions (reset vectore & nop) */
+        memcpy(Pu8Data, Pu8BlankWord, 4); /* Blank word 1 */
+        memcpy(Pu8Data + 4, Pu8BlankWord, 4); /* Blank word 2 */
+    }
+
+    if (u32PrevAddr == FptsDataBlock->u32StartAddr)
+    {
+        /* Boundary aligned block */
+        Bootloader_ManageCrcData(pBlock);
+        u32PrevAddr = pBlock->u32EndAddr;
+    }
+    else
+    {
+        if ((pBlock->u32StartAddr > u32PrevAddr) && (pBlock->u32StartAddr == ADDR_START_APPLI))
+        {
+            /* Add blanked block until bootloader start address */
+        }
+        else /* if (pBlock->u32StartAddr > u32PrevAddr) */
+        {
+            /* Add blanked block until current block start address */
+        }
+        /*  */
+    }
+}
+
+void Core_BlankDataBlock(tsDataBlock *FptsDataBlock)
+{
+    uint8_t *Pu8Data = FptsDataBlock->pu8Data;
+    uint16_t u16Index = 0;
+    while (u16Index < BYTES_PER_BLOCK)
+    {
+        memcpy(Pu8Data + u16Index, Pu8BlankWord, 4);
+        u16Index += 4;
+    }
+    FptsDataBlock->u16Len = BYTES_PER_BLOCK;
+    FptsDataBlock->u32StartAddr += BYTES_PER_BLOCK;
+    FptsDataBlock->u32EndAddr += BYTES_PER_BLOCK;
+}
+
+    void Core_FormatDecription(void)
 {
     uint16_t u16Cnt = 0;
     uint16_t u16Index = 0;
