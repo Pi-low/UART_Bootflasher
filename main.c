@@ -99,7 +99,7 @@ int main(int argc, char * argv[])
                     if (bTmp)
                     {
                         Bootloader_ProcessFile(MyFile, u32TotalFileSize);
-                        //Bootloader_CheckFlash();
+                        Bootloader_CheckFlash();
                     }
                     else
                     {
@@ -107,9 +107,6 @@ int main(int argc, char * argv[])
                     }
                 }
                 teMainCurrentState = eStateQuit;
-            break;
-
-            eStateCheckTarget:
             break;
 
             case eStateQuit:

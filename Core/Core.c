@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "../Config.h"
 #include "../Bootloader/Bootloader.h"
 #include "../Intel_HEX_parser/ihex_parser/ihex_parser.h"
@@ -25,6 +26,8 @@ static uint32_t su32SavedLen = 0;
 static uint8_t Core_HexToDec(uint8_t h);
 static bool Core_SendBlock(uint32_t Fu32NewStartAddr);
 static void Core_FormatDecription(void);
+static void Core_BlankDataBlock(tsDataBlock *FptsDataBlock);
+static void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock);
 
 uint8_t Core_HexToDec(uint8_t h)
 {
@@ -264,7 +267,11 @@ bool Core_SendBlock(uint32_t Fu32NewStartAddr)
    uint32_t u32OffsetAddr = 0;
    /* Send the block */
     bRetVal = Bootloader_TransferData(&tsCurrentDatablock);
-    Core_ManageCrcBlock(&tsCurrentDatablock);
+
+    if (tsCurrentDatablock.u32StartAddr < ADDR_APPL_END)
+    {
+        Core_ManageCrcBlock(&tsCurrentDatablock);
+    }
 
     /* Prepare next block */
     tsCurrentDatablock.u16CRCBlock = 0;
@@ -281,10 +288,13 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
     static uint32_t u32PrevAddr = 0;
     uint32_t u32CurStartAddr = FptsDataBlock->u32StartAddr;
     tsDataBlock *pBlock = FptsDataBlock;
-    tsDataBlock tsSavedBlock;
+    tsDataBlock tsBlankedBlock;
     uint8_t *Pu8Data = FptsDataBlock->pu8Data;
     uint16_t u16Cnt = 0;
-    /* Fill end of current block */
+    uint32_t u32AddrGap = 0;
+    uint32_t u32AddrCnt = 0;
+
+    /* Fill end of current block in case not */
     while (pBlock->u16Len < BYTES_PER_BLOCK)
     {
         memcpy(Pu8Data + pBlock->u16Len, Pu8BlankWord, 4);
@@ -297,7 +307,9 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
         memcpy(Pu8Data, Pu8BlankWord, 4); /* Blank word 1 */
         memcpy(Pu8Data + 4, Pu8BlankWord, 4); /* Blank word 2 */
     }
-
+/* ----------------------------------- */
+/*    Manage CRC for current block     */
+/* ----------------------------------- */
     if (u32PrevAddr == FptsDataBlock->u32StartAddr)
     {
         /* Boundary aligned block */
@@ -306,15 +318,49 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
     }
     else
     {
+        tsBlankedBlock.u32StartAddr = u32PrevAddr;
+        tsBlankedBlock.u32EndAddr = pBlock->u32StartAddr + BYTES_PER_BLOCK;
+
         if ((pBlock->u32StartAddr > u32PrevAddr) && (pBlock->u32StartAddr == ADDR_START_APPLI))
         {
             /* Add blanked block until bootloader start address */
+            u32AddrGap = ADDR_START_BOOT - u32PrevAddr;
+#if PRINT_DEBUG_TRACE == 1
+            printf("[CRC]: Current block:%06X Prev:%06X Gap:%u\r\n", pBlock->u32StartAddr, u32PrevAddr, u32AddrGap);
+#endif
+            while (u32AddrCnt < u32AddrGap)
+            {
+                Core_BlankDataBlock(&tsBlankedBlock);
+                Bootloader_ManageCrcData(&tsBlankedBlock);
+                tsBlankedBlock.u32StartAddr += BYTES_PER_BLOCK;
+                tsBlankedBlock.u32EndAddr += BYTES_PER_BLOCK;
+                u32AddrCnt += BYTES_PER_BLOCK;
+            }
         }
-        else /* if (pBlock->u32StartAddr > u32PrevAddr) */
+        else if (pBlock->u32StartAddr > u32PrevAddr)
         {
             /* Add blanked block until current block start address */
+            u32AddrGap = pBlock->u32StartAddr - u32PrevAddr;
+#if PRINT_DEBUG_TRACE == 1
+            printf("[CRC]: Current block:%06X Prev:%06X Gap:%u\r\n", pBlock->u32StartAddr, u32PrevAddr, u32AddrGap);
+#endif
+            while (u32AddrCnt < u32AddrGap)
+            {
+                Core_BlankDataBlock(&tsBlankedBlock);
+                Bootloader_ManageCrcData(&tsBlankedBlock);
+                tsBlankedBlock.u32StartAddr += BYTES_PER_BLOCK;
+                tsBlankedBlock.u32EndAddr += BYTES_PER_BLOCK;
+                u32AddrCnt += BYTES_PER_BLOCK;
+            }
         }
-        /*  */
+        else
+        {
+            printf("[Warning]: Core_ManageCrcBlock exception at 0x%06X", pBlock->u32StartAddr);
+            system("pause");
+        }
+        /* Start adding current block */
+        Bootloader_ManageCrcData(pBlock);
+        u32PrevAddr = pBlock->u32EndAddr;
     }
 }
 
@@ -328,11 +374,9 @@ void Core_BlankDataBlock(tsDataBlock *FptsDataBlock)
         u16Index += 4;
     }
     FptsDataBlock->u16Len = BYTES_PER_BLOCK;
-    FptsDataBlock->u32StartAddr += BYTES_PER_BLOCK;
-    FptsDataBlock->u32EndAddr += BYTES_PER_BLOCK;
 }
 
-    void Core_FormatDecription(void)
+void Core_FormatDecription(void)
 {
     uint16_t u16Cnt = 0;
     uint16_t u16Index = 0;

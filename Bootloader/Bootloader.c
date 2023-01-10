@@ -402,7 +402,6 @@ bool Bootloader_CheckFlash(void)
     tsSendMsg.pu8Payload[1] = (u16CRC >> 8) & 0x00FF;
     tsSendMsg.pu8Payload[2] = (su16CRCBlockCnt >> 8) & 0x00FF;
     tsSendMsg.pu8Payload[3] = su16CRCBlockCnt & 0x00FF;
-
         printf("[Info]: Request flash check (CRC: 0x%02X%02X)\r\n", tsSendMsg.pu8Payload[0], tsSendMsg.pu8Payload[1]);
 #if SEND_UART == 1
         if (ComPort_SendGenericFrame(&tsSendMsg, 5000) == true)

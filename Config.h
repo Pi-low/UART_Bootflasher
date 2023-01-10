@@ -17,7 +17,7 @@
 #define SEND_UART 1u
 #endif
 
-#define PRINT_BLOCK_RAW 1u
-#define PRINT_BLOCK_UART 1u
-#define PRINT_BLOCK_CRC 0u
+#define PRINT_BLOCK_RAW 0u
+#define PRINT_BLOCK_UART 0u
+#define PRINT_BLOCK_CRC 1u
 #endif // CONFIG_H_INCLUDED
