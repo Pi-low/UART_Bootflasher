@@ -326,7 +326,7 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
             /* Add blanked block until bootloader start address */
             u32AddrGap = ADDR_START_BOOT - u32PrevAddr;
 #if PRINT_DEBUG_TRACE == 1
-            printf("[CRC]: Current block:%06X Prev:%06X Gap:%u\r\n", pBlock->u32StartAddr, u32PrevAddr, u32AddrGap);
+            printf("<============================ [CRC]: Current block:%06X Prev:%06X Add blank: %u\r\n", pBlock->u32StartAddr, u32PrevAddr, u32AddrGap / BYTES_PER_BLOCK);
 #endif
             while (u32AddrCnt < u32AddrGap)
             {
@@ -336,13 +336,16 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
                 tsBlankedBlock.u32EndAddr += BYTES_PER_BLOCK;
                 u32AddrCnt += BYTES_PER_BLOCK;
             }
+#if PRINT_DEBUG_TRACE == 1
+            printf("[CRC IVT = 0x%04X]\r\n", Bootloader_GetCrcData());
+#endif
         }
         else if (pBlock->u32StartAddr > u32PrevAddr)
         {
             /* Add blanked block until current block start address */
             u32AddrGap = pBlock->u32StartAddr - u32PrevAddr;
 #if PRINT_DEBUG_TRACE == 1
-            printf("[CRC]: Current block:%06X Prev:%06X Gap:%u\r\n", pBlock->u32StartAddr, u32PrevAddr, u32AddrGap);
+            printf("<============================ [CRC]: Current block: 0x%06X Prev:0x%06X Add blank: %u\r\n", pBlock->u32StartAddr, u32PrevAddr, u32AddrGap / BYTES_PER_BLOCK);
 #endif
             while (u32AddrCnt < u32AddrGap)
             {
@@ -359,6 +362,9 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
             system("pause");
         }
         /* Start adding current block */
+#if PRINT_DEBUG_TRACE == 1
+        printf("[CRC] Resume with current block: 0x%06X Prev:0x%06X ================================>\r\n", pBlock->u32StartAddr, u32PrevAddr);
+#endif
         Bootloader_ManageCrcData(pBlock);
         u32PrevAddr = pBlock->u32EndAddr;
     }
