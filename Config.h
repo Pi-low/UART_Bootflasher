@@ -9,7 +9,7 @@
 
 #ifdef DEBUG_CONFIG
 /*  ---- USED FOR DEBUGGGING PURPOSES ---- */
-#define SEND_UART 0u
+#define SEND_UART 1u
 #define PRINT_DEBUG_TRACE 1u
 #else
 /*  ---- DISABLE ALL DEBUG FEATURES ---- */
@@ -17,7 +17,7 @@
 #define SEND_UART 1u
 #endif
 
-#define PRINT_BLOCK_RAW 0u
+#define PRINT_BLOCK_RAW 1u
 #define PRINT_BLOCK_UART 0u
 #define PRINT_BLOCK_CRC 1u
 #endif // CONFIG_H_INCLUDED

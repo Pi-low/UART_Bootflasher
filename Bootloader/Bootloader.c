@@ -260,7 +260,7 @@ bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
    *(pu8FrameData + 1) = (u16Tmp >> 8) & 0x00FF;
 #if PRINT_DEBUG_TRACE == 1
 #if PRINT_BLOCK_RAW == 1
-    printf("\r\n[BLOCK ADDR: 0x%06X, LEN: %d, CRC: 0x%02X%02X]:",
+    printf("[BLOCK ADDR: 0x%06X, LEN: %d, CRC: 0x%02X%02X]:\r\n",
           FptsDataBlock->u32StartAddr,
           FptsDataBlock->u16Len,
           (uint8_t)u16Tmp,
@@ -268,7 +268,7 @@ bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
 
     for (u16Cnt = 0; u16Cnt < FptsDataBlock->u16Len; u16Cnt++)
     {
-        if (u16Cnt % 32 == 0)
+        if (((u16Cnt % 32) == 0) && (u16Cnt != 0))
         {
             printf("\r\n ");
         }
@@ -277,11 +277,12 @@ bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
     printf("\r\n");
 #endif
 #if PRINT_BLOCK_UART == 1
+   printf("[Sending block]: 0x%06X : %u (0x%02X%02X)\r\n", FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len, (uint8_t)u16Tmp, (uint8_t)(u16Tmp >> 8));
    for (u16Cnt = 0; u16Cnt < tsSendMsg.u16Length; u16Cnt++)
    {
-       if ((u16Cnt % 32) == 0)
+       if (((u16Cnt % 32) == 0) && (u16Cnt != 0))
        {
-            printf("\r\n ");
+            printf("\r\n");
         }
         if ((u16Cnt == 0) || (u16Cnt == (tsSendMsg.u16Length - 2)))
         {
@@ -298,7 +299,7 @@ bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
 #endif
 
 #else
-    printf("[Sending block]: 0x%06X : %u (0x%02X%02X)\r\n", FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len, (uint8_t)u16Tmp, (uint8_t)(u16Tmp >> 8));
+    printf("[Sending block]: @0x%06X : %u (0x%02X%02X)\r\n", FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len, (uint8_t)u16Tmp, (uint8_t)(u16Tmp >> 8));
 #endif
 #if SEND_UART == 1
     if (ComPort_SendGenericFrame(&tsSendMsg, 110) == true)
@@ -404,7 +405,7 @@ bool Bootloader_CheckFlash(void)
     tsSendMsg.pu8Payload[3] = su16CRCBlockCnt & 0x00FF;
         printf("[Info]: Request flash check (CRC: 0x%02X%02X)\r\n", tsSendMsg.pu8Payload[0], tsSendMsg.pu8Payload[1]);
 #if SEND_UART == 1
-        if (ComPort_SendGenericFrame(&tsSendMsg, 5000) == true)
+        if (ComPort_SendGenericFrame(&tsSendMsg, 1000) == true)
         {
             if (tsSendMsg.pu8Response[0] == eOperationSuccess)
             {
@@ -440,7 +441,7 @@ void Bootloader_ManageCrcData(tsDataBlock* FptsDataBlock)
     printf("[CRC]: Block %u: 0x%06X (%u)\r\n", su16CRCBlockCnt, FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len);
     for (u16Cnt = 0; u16Cnt < FptsDataBlock->u16Len; u16Cnt++)
     {
-        if ((u16Cnt % 32) == 0)
+        if (((u16Cnt % 32) == 0) && (u16Cnt != 0))
         {
             printf("\r\n ");
         }
