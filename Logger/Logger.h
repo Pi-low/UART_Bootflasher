@@ -9,5 +9,6 @@ void Logger_Init(void);
 void Logger_Append(char* FpcString);
 void Logger_Close(void);
 void Logger_AppendArray(char *FpcText, uint8_t *Fpu8Array, uint16_t Fu16Len);
+void Logger_LineFeed(void);
 
 #endif // LOGGER_H_INCLUDED
