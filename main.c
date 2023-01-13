@@ -14,15 +14,18 @@ int main(int argc, char * argv[])
 {
     uint8_t u8KeepLoop = 1;
     FILE *MyFile;
-#if SEND_UART == 1
+#if SEND_UART
     teMainStates teMainCurrentState = eStateSelectComPort;
 #else
     teMainStates teMainCurrentState = eStateSelectFile;
 #endif
+    char pcLogString[256];
     uint32_t u32TotalFileSize = 0;
     char *pcString = NULL;
     char pcBuffer[10];
     bool bTmp = true;
+    Logger_Init();
+
     while (u8KeepLoop)
     {
         switch(teMainCurrentState)
@@ -63,7 +66,9 @@ int main(int argc, char * argv[])
                 MyFile = fopen(pcString, "rb");
                 if (MyFile != NULL)
                 {
-                    printf("Open: \"%s\"\r\n", pcString);
+                    sprintf(pcLogString, "Open file: %s\r", pcString);
+                    Logger_Append(pcLogString);
+                    printf("Open: \"%s\"", pcString);
                     u32TotalFileSize = main_GetFileSize(MyFile);
                     Bootloader_GetInfoFromiHexFile(MyFile, u32TotalFileSize);
                     teMainCurrentState = eStateTargetInfo;
@@ -71,6 +76,7 @@ int main(int argc, char * argv[])
                 else
                 {
                     printf("[Error]: Cannot open file, exit program !\r\n");
+                    Logger_Append("Error: Cannot open file, exit program !\r");
                     teMainCurrentState = eStateQuit;
                 }
             break;
@@ -87,6 +93,7 @@ int main(int argc, char * argv[])
                 else
                 {
                     printf("[Error]: Abort operation !\r\n");
+                    Logger_Append("Error: Abort operation !\r");
                     teMainCurrentState = eStateQuit;
                 }
             break;
@@ -104,6 +111,7 @@ int main(int argc, char * argv[])
                     else
                     {
                         printf("[Error]: Abort operation !\r\n");
+                        Logger_Append("Error: Abort operation !\r");
                     }
                 }
                 teMainCurrentState = eStateQuit;
@@ -134,7 +142,8 @@ int main(int argc, char * argv[])
             break;
         }
     }
-return EXIT_SUCCESS;
+    Logger_Close();
+    return EXIT_SUCCESS;
 }
 
 uint32_t main_GetFileSize(FILE* FpHexFile)

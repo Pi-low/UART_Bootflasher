@@ -5,6 +5,7 @@
 #include <windows.h>
 #include "../RS-232/rs232.h"
 #include "../Bootloader/Bootloader.h"
+#include "../Logger/Logger.h"
 #include "ComPort.h"
 
 static int siComPortNumber = 0;
@@ -36,6 +37,7 @@ void ComPort_Scan(void)
 bool ComPort_Open(char* FpcString)
 {
     bool bRetVal = true;
+    char pcLogString[64];
     if ((*(FpcString) >= '0') && (*(FpcString) <= '9'))
     {
         siComPortNumber = atoi((const char*)FpcString);
@@ -52,6 +54,8 @@ bool ComPort_Open(char* FpcString)
     else
     {
         sbComOpened = true;
+        sprintf(pcLogString, "COM%u opened\r", spu8ListComPort[siComPortNumber]);
+        Logger_Log(pcLogString);
     }
     return bRetVal;
 }
@@ -75,6 +79,7 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
     uint8_t pu8RxBuffer[MAX_BUFFER_SIZE];
     uint16_t u16FrmLength = FptsMsg->u16Length + 1;
     uint16_t u16i;
+    char pcLogString[2048];
 
     pu8TxBuffer[0] = 0xA5;
     pu8TxBuffer[1] = FptsMsg->u8ID;
@@ -93,8 +98,10 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
     pu8TxBuffer[4 + u16i] = u8Checksum;
     RS232_flushRX(siComPortNumber);
     RS232_SendBuf(siComPortNumber, pu8TxBuffer, u16FrmLength + 4);
-#if PRINT_DEBUG_TRACE == 1
-    printf("[Tx]: ");
+    sprintf(pcLogString, "Sending to target:\r");
+    Logger_AppendArray(pcLogString, pu8TxBuffer, u16FrmLength + 4);
+#if PRINT_DEBUG_TRACE
+    printf("[COM Tx]: ");
     for(u16i = 0; u16i < u16FrmLength + 4; u16i++)
     {
         if ((u16i % 32) == 0)
@@ -114,9 +121,10 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
 
     u16ByteCnt = RS232_PollComport(siComPortNumber, pu8RxBuffer, MAX_FRAME_LENGTH);
     u16FrmLength = (((uint16_t)pu8RxBuffer[2] << 8) & 0xFF00) | (uint16_t)pu8RxBuffer[3];
-
-#if PRINT_DEBUG_TRACE == 1
-    printf("[Rx %u/%u]: ", u16ByteCnt, u16FrmLength + 4);
+    sprintf(pcLogString, "Receiving from target:\r");
+    Logger_AppendArray(pcLogString, pu8RxBuffer, u16ByteCnt);
+#if PRINT_DEBUG_TRACE
+    printf("[COM Rx %u(%u)]: ", u16ByteCnt, u16FrmLength + 4);
     for(u16i = 0; u16i < u16ByteCnt; u16i++)
     {
         if ((u16i % 32) == 0)
@@ -156,12 +164,14 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
         else
         {
             printf("[Error]: Bad rx frame checksum: %u\r\n", u8Checksum);
+            Logger_Append("Error: Bad rx frame checksum\r");
             bErrCheck = false;
         }
     } /* if ((pu8RxBuffer[0] == 0x5A) && ((pu8RxBuffer[1] & 0x0F) == FptsMsg->u8ID) && ((u16FrmLength + 4) == u16ByteCnt)) */
     else
     {
         printf("[Error]: no frame found\r\n");
+        Logger_Append("Error: no frame found\r");
         bErrCheck = false;
     }
     bRetVal = bErrCheck;

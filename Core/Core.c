@@ -3,6 +3,7 @@
 #include "../Config.h"
 #include "../Bootloader/Bootloader.h"
 #include "../Intel_HEX_parser/ihex_parser/ihex_parser.h"
+#include "../Logger/Logger.h"
 #include "Core.h"
 
 /* ------------------------------------------------------------ */
@@ -286,6 +287,7 @@ bool Core_SendBlock(uint32_t Fu32NewStartAddr)
 void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
 {
     static uint32_t u32PrevAddr = 0;
+    char pcLogString[256];
     uint32_t u32CurStartAddr = FptsDataBlock->u32StartAddr;
     tsDataBlock *pBlock = FptsDataBlock;
     tsDataBlock tsBlankedBlock;
@@ -325,9 +327,11 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
         {
             /* Add blanked block until bootloader start address */
             u32AddrGap = ADDR_START_BOOT - u32PrevAddr;
-#if PRINT_DEBUG_TRACE == 1
+#if PRINT_DEBUG_TRACE && PRINT_BLOCK_CRC
             printf("<============================ [CRC]: Current block:%06X Prev:%06X Add blank: %u\r\n", pBlock->u32StartAddr, u32PrevAddr, u32AddrGap / BYTES_PER_BLOCK);
 #endif
+            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%06X to 0x%06X\r", u32AddrGap / BYTES_PER_BLOCK, u32PrevAddr, ADDR_START_BOOT);
+            Logger_Append(pcLogString);
             while (u32AddrCnt < u32AddrGap)
             {
                 Core_BlankDataBlock(&tsBlankedBlock);
@@ -336,17 +340,21 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
                 tsBlankedBlock.u32EndAddr += BYTES_PER_BLOCK;
                 u32AddrCnt += BYTES_PER_BLOCK;
             }
-#if PRINT_DEBUG_TRACE == 1
+#if PRINT_DEBUG_TRACE && PRINT_BLOCK_CRC
             printf("[CRC IVT = 0x%04X]\r\n", Bootloader_GetCrcData());
 #endif
+            sprintf(pcLogString, "CRC IVT=0x%04X\r", Bootloader_GetCrcData());
+            Logger_Append(pcLogString);
         }
         else if (pBlock->u32StartAddr > u32PrevAddr)
         {
             /* Add blanked block until current block start address */
             u32AddrGap = pBlock->u32StartAddr - u32PrevAddr;
-#if PRINT_DEBUG_TRACE == 1
+#if PRINT_DEBUG_TRACE && PRINT_BLOCK_CRC
             printf("<============================ [CRC]: Current block: 0x%06X Prev:0x%06X Add blank: %u\r\n", pBlock->u32StartAddr, u32PrevAddr, u32AddrGap / BYTES_PER_BLOCK);
 #endif
+            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%06X to 0x%06X\r", u32AddrGap / BYTES_PER_BLOCK, u32PrevAddr, pBlock->u32StartAddr);
+            Logger_Append(pcLogString);
             while (u32AddrCnt < u32AddrGap)
             {
                 Core_BlankDataBlock(&tsBlankedBlock);
@@ -362,7 +370,7 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
             system("pause");
         }
         /* Start adding current block */
-#if PRINT_DEBUG_TRACE == 1
+#if PRINT_DEBUG_TRACE && PRINT_BLOCK_CRC
         printf("[CRC] Resume with current block: 0x%06X Prev:0x%06X ================================>\r\n", pBlock->u32StartAddr, u32PrevAddr);
 #endif
         Bootloader_ManageCrcData(pBlock);
@@ -399,13 +407,16 @@ void Core_FormatDecription(void)
 
 void Core_GetSwInfo(uint16_t* Fpu16Version, uint8_t* Fpu8Decription)
 {
-    printf("[File SW Version]: %u.%u \r\n[File SW Info]: %s\r\n", u8SwMajor, u8SwMinor, pu8LogisticData);
+    char pcLogString[512];
+    sprintf(pcLogString, "\rHexfile SW Version: %02X.%02X\rHexfile SW Info: %s\r", u8SwMajor, u8SwMinor, pu8LogisticData);
+    Logger_Append(pcLogString);
+    printf("[File SW Version]: %02X.%02X \r\n[File SW Info]: %s\r\n", u8SwMajor, u8SwMinor, pu8LogisticData);
     if (Fpu16Version != NULL)
     {
         *(Fpu16Version) = (((uint16_t)u8SwMajor << 8) & 0xFF00) | (uint16_t)u8SwMajor;
     }
     if (Fpu8Decription != NULL)
     {
-        Fpu8Decription = pu8LogisticData;
+        memcpy(Fpu8Decription, pu8LogisticData, 128);
     }
 }
