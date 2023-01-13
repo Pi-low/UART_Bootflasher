@@ -5,6 +5,7 @@
 #define ALLOCATION_SIZE 1024
 #define BLOCK_SIZE 128
 #define EXTENSION 256
+#define PRINT_GROUP_BYTE_PER_LINE 32
 
 
 #ifdef DEBUG_CONFIG
@@ -19,5 +20,5 @@
 
 #define PRINT_BLOCK_RAW 1u
 #define PRINT_BLOCK_UART 0u
-#define PRINT_BLOCK_CRC 1u
+#define PRINT_BLOCK_CRC 0u
 #endif // CONFIG_H_INCLUDED
