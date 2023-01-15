@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include "../Config.h"
 #include "../Core/Core.h"
 #include "../Intel_HEX_parser/ihex_parser/ihex_parser.h"
 #include "../ComPort/ComPort.h"
@@ -114,8 +115,8 @@ bool Bootloader_GetInfoFromiHexFile(FILE* FpHexFile, uint32_t Fu32FileSize)
 
 void Bootloader_PrintErrcode(uint8_t Fu8ErrCode)
 {
-    char pcLogString[128];
-    sprintf(pcLogString, "Target: %s\r, spcErrCode[Fu8ErrCode]");
+    char pcLogString[64];
+    sprintf(pcLogString, "Target: %s\r", spcErrCode[Fu8ErrCode]);
     Logger_Append(pcLogString);
     printf("[Target]: %s\r\n", spcErrCode[Fu8ErrCode]);
 }

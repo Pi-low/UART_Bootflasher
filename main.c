@@ -68,7 +68,7 @@ int main(int argc, char * argv[])
                 {
                     sprintf(pcLogString, "Open file: %s\r", pcString);
                     Logger_Append(pcLogString);
-                    printf("Open: \"%s\"", pcString);
+                    printf("Open: \"%s\"\r\n", pcString);
                     u32TotalFileSize = main_GetFileSize(MyFile);
                     Bootloader_GetInfoFromiHexFile(MyFile, u32TotalFileSize);
                     teMainCurrentState = eStateTargetInfo;
@@ -87,8 +87,6 @@ int main(int argc, char * argv[])
                 if (bTmp)
                 {
                     teMainCurrentState = eStateFlashTarget;
-                    fflush(stdin);
-                    system("PAUSE");
                 }
                 else
                 {

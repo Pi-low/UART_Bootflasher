@@ -366,7 +366,8 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
         }
         else
         {
-            printf("[Warning]: Core_ManageCrcBlock exception at 0x%06X", pBlock->u32StartAddr);
+            Logger_Append("Warning : Core_ManageCrcBlock exception at 0x%06X\r");
+            printf("[Warning]: Core_ManageCrcBlock exception at 0x%06X\r\n", pBlock->u32StartAddr);
             system("pause");
         }
         /* Start adding current block */
@@ -408,7 +409,7 @@ void Core_FormatDecription(void)
 void Core_GetSwInfo(uint16_t* Fpu16Version, uint8_t* Fpu8Decription)
 {
     char pcLogString[512];
-    sprintf(pcLogString, "\rHexfile SW Version: %02X.%02X\rHexfile SW Info: %s\r", u8SwMajor, u8SwMinor, pu8LogisticData);
+    sprintf(pcLogString, "\r      Hexfile SW Version : %02X.%02X\r      Hexfile SW Info : %s\r", u8SwMajor, u8SwMinor, pu8LogisticData);
     Logger_Append(pcLogString);
     printf("[File SW Version]: %02X.%02X \r\n[File SW Info]: %s\r\n", u8SwMajor, u8SwMinor, pu8LogisticData);
     if (Fpu16Version != NULL)

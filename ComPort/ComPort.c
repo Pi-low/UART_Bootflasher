@@ -55,7 +55,7 @@ bool ComPort_Open(char* FpcString)
     {
         sbComOpened = true;
         sprintf(pcLogString, "COM%u opened\r", spu8ListComPort[siComPortNumber]);
-        Logger_Log(pcLogString);
+        Logger_Append(pcLogString);
     }
     return bRetVal;
 }
@@ -98,7 +98,7 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
     pu8TxBuffer[4 + u16i] = u8Checksum;
     RS232_flushRX(siComPortNumber);
     RS232_SendBuf(siComPortNumber, pu8TxBuffer, u16FrmLength + 4);
-    sprintf(pcLogString, "Sending to target:\r");
+    sprintf(pcLogString, "UART Tx:\r");
     Logger_AppendArray(pcLogString, pu8TxBuffer, u16FrmLength + 4);
 #if PRINT_DEBUG_TRACE
     printf("[COM Tx]: ");
@@ -121,7 +121,7 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
 
     u16ByteCnt = RS232_PollComport(siComPortNumber, pu8RxBuffer, MAX_FRAME_LENGTH);
     u16FrmLength = (((uint16_t)pu8RxBuffer[2] << 8) & 0xFF00) | (uint16_t)pu8RxBuffer[3];
-    sprintf(pcLogString, "Receiving from target:\r");
+    sprintf(pcLogString, "UART Rx:\r");
     Logger_AppendArray(pcLogString, pu8RxBuffer, u16ByteCnt);
 #if PRINT_DEBUG_TRACE
     printf("[COM Rx %u(%u)]: ", u16ByteCnt, u16FrmLength + 4);
