@@ -72,6 +72,7 @@ int main(int argc, char * argv[])
                     u32TotalFileSize = main_GetFileSize(MyFile);
                     Bootloader_GetInfoFromiHexFile(MyFile, u32TotalFileSize);
                     teMainCurrentState = eStateTargetInfo;
+                    system("pause");
                 }
                 else
                 {

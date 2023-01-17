@@ -2,7 +2,8 @@
 #define COMPORT_H_INCLUDED
 
 #define MAX_COM_PORT_NB (48)
-#define UNIT_TIME_DIV (50) //ms
+#define UNIT_TIME_DIV (25) // time to transmit 266 bytes at 115200 bauds + extra
+#define MAX_FRAME_FIFO_SIZE (16)
 
 #include <stdint.h>
 #include <stdbool.h>
