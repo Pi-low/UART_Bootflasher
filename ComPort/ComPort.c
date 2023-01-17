@@ -130,14 +130,17 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
             pu8Tmp = sp2u8FrameFIFO[u16i];
             if ((*pu8Tmp & 0x0F) == FptsMsg->u8ID)
             {
-                u16FrmLength = (((uint16_t) *(pu8Tmp + 2) << 8) & 0xFF00) | (uint16_t) *(pu8Tmp + 3);
+                u16FrmLength = (((uint16_t) *(pu8Tmp + 1) << 8) & 0xFF00) | (uint16_t) *(pu8Tmp + 2);
                 u16FrmLength--; /* Escape checksum value */
+                FptsMsg->u16Length = u16FrmLength;
+                pu8Tmp += 3;
                 memcpy(pu8RxBuffer, pu8Tmp, u16FrmLength);
             }
-            if (*pu8Tmp == 0)
+            else if (*pu8Tmp == 0)
             {
                 /* Sporadic boot frame (info) */
-                Bootloader_PrintErrcode(*(pu8Tmp + 1));
+                pu8Tmp += 3;
+                Bootloader_PrintErrcode(*pu8Tmp);
             }
         }
     }
@@ -193,7 +196,7 @@ uint16_t ComPort_FetchIncomingFrames(int Fi16Timeout)
             pu8Buf++; /* escape SoF byte */
             u16Cnt++;
             u16FrameLen = (((uint16_t) * (pu8Buf + 1) << 8) & 0xFF00) | (uint16_t) * (pu8Buf + 2);
-            if ((u16FrameLen < MAX_FRAME_LENGTH) && ((u16Cnt + u16FrameLen + 3) < u16DataAmount))
+            if ((u16FrameLen < MAX_FRAME_LENGTH) && ((u16Cnt + u16FrameLen + 3) <= u16DataAmount))
             {
                 for (u16a = 0; u16a < u16FrameLen + 3; u16a++)
                 {

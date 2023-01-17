@@ -17,41 +17,42 @@ static uint32_t su32CurFlashAddr = 0;
 static uint16_t su16CRCBlockCnt = 0;
 static uint8_t u8EndFlashFlag = 0;
 static const char *spcErrCode[eBootSupportedReturnCode] =
-{
-    "Operation successful",
-    "Operation not available",
-    "Operation not allowed",
-    "Operation fail",
-    "Bad frame checksum",
-    "Bad frame length",
-    "Unknown frame identifier",
-    "Frame timeout",
-    "Flash erase error",
-    "Flash memory not blanked",
-    "Incorrect block address",
-    "CRC block error",
-    "Flash write error",
-    "Application check error",
-    "Boot session timeout",
-    "Entered boot idle mode",
-    "Boot start",
+    {
+        "Operation successful",
+        "Operation not available",
+        "Operation not allowed",
+        "Operation fail",
+        "Bad frame checksum",
+        "Bad frame length",
+        "Unknown frame identifier",
+        "Frame timeout",
+        "Flash erase error",
+        "Flash memory not blanked",
+        "Incorrect block address",
+        "CRC block error",
+        "Flash write error",
+        "Application check error",
+        "Boot session timeout",
+        "Entered boot idle mode",
+        "Boot start",
 };
 
-bool Bootloader_ProcessFile(FILE * FpHexFile, uint32_t Fu32FileSize)
+bool Bootloader_ProcessFile(FILE *FpHexFile, uint32_t Fu32FileSize)
 {
     bool RetVal = true;
-    uint8_t* pu8LastData = NULL;
+    uint8_t *pu8LastData = NULL;
     uint32_t u32Read = 0, u32DataCnt = 0, u32Remain = 0;
 
     ihex_set_callback_func((ihex_callback_fp)Core_CbDataBlockGen);
     ihex_reset_state();
     Core_InitDataBlockGen();
     Core_InitCRCBlockGen();
+    u8EndFlashFlag = 0;
     fseek(FpHexFile, 0, SEEK_SET); /* Reset cursor */
 
     while ((u32DataCnt < Fu32FileSize) && (RetVal == true))
     {
-        u32Read = fread(spu8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE/BLOCK_SIZE), FpHexFile);
+        u32Read = fread(spu8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE / BLOCK_SIZE), FpHexFile);
         if (u32Read != 0)
         {
             u32Read *= BLOCK_SIZE;
@@ -62,7 +63,6 @@ bool Bootloader_ProcessFile(FILE * FpHexFile, uint32_t Fu32FileSize)
 #if PRINT_DEBUG_TRACE
             printf("[Read %u] parsed:%u\r\n", u32Read, RetVal);
 #endif // PRINT_DEBUG_TRACE
-
         }
         else
         {
@@ -96,7 +96,7 @@ bool Bootloader_ProcessFile(FILE * FpHexFile, uint32_t Fu32FileSize)
     return RetVal;
 }
 
-bool Bootloader_GetInfoFromiHexFile(FILE* FpHexFile, uint32_t Fu32FileSize)
+bool Bootloader_GetInfoFromiHexFile(FILE *FpHexFile, uint32_t Fu32FileSize)
 {
     bool RetVal = true;
     uint32_t u32Read = 0;
@@ -107,7 +107,7 @@ bool Bootloader_GetInfoFromiHexFile(FILE* FpHexFile, uint32_t Fu32FileSize)
 
     do
     {
-        u32Read = fread(spu8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE/BLOCK_SIZE), FpHexFile);
+        u32Read = fread(spu8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE / BLOCK_SIZE), FpHexFile);
         u32Read *= BLOCK_SIZE;
         Core_PreParse(spu8DataBuffer, &u32Read);
     } while (ihex_parser(spu8DataBuffer, u32Read));
@@ -123,7 +123,7 @@ void Bootloader_PrintErrcode(uint8_t Fu8ErrCode)
     printf("[Target]: %s\r\n", spcErrCode[Fu8ErrCode]);
 }
 
-bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version)
+bool Bootloader_RequestSwVersion(uint16_t *Fpu16Version)
 {
     tsFrame tsSendMsg;
     char pcLogString[64];
@@ -136,7 +136,7 @@ bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version)
 #endif
     Logger_Append("Info: Request SW version\r");
 #if SEND_UART
-    if (ComPort_SendGenericFrame(&tsSendMsg, 50) == true)
+    if (ComPort_SendGenericFrame(&tsSendMsg, 1000) == true)
     {
 
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
@@ -177,7 +177,7 @@ bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version)
 #endif
 }
 
-bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf)
+bool Bootloader_RequestSwInfo(uint8_t *Fpu8Buf)
 {
     tsFrame tsSendMsg;
     char pcLogString[512];
@@ -185,7 +185,7 @@ bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf)
     tsSendMsg.u16Length = 1;
     tsSendMsg.pu8Payload[0] = 2;
 
-    uint8_t* pu8Intern = NULL;
+    uint8_t *pu8Intern = NULL;
 
 #if PRINT_DEBUG_TRACE
     printf("Info: Request SW info\r\n");
@@ -201,7 +201,7 @@ bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf)
         pu8Intern = malloc(128 * sizeof(uint8_t));
     }
 
-    if (ComPort_SendGenericFrame(&tsSendMsg, 100) == true)
+    if (ComPort_SendGenericFrame(&tsSendMsg, 1000) == true)
     {
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
         {
@@ -236,13 +236,13 @@ bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf)
 #endif
 }
 
-bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
+bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
 {
     bool bRetVal = true;
     char pcLogString[2048];
     tsFrame tsSendMsg;
-    uint8_t* pu8FrameData = tsSendMsg.pu8Payload;
-    uint16_t* pu16CRC = &FptsDataBlock->u16CRCBlock;
+    uint8_t *pu8FrameData = tsSendMsg.pu8Payload;
+    uint16_t *pu16CRC = &FptsDataBlock->u16CRCBlock;
     uint16_t u16Cnt = 0, u16Tmp = 0;
 
     if (FptsDataBlock->u32StartAddr >= ADDR_APPL_END)
@@ -256,31 +256,31 @@ bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
     tsSendMsg.u8ID = eService_dataTransfer;
 
     /* Load block address */
-   *(pu8FrameData) =     (FptsDataBlock->u32StartAddr >> 16) & 0x000000FF;
-   *(pu8FrameData + 1) = (FptsDataBlock->u32StartAddr >> 8) & 0x000000FF;
-   *(pu8FrameData + 2) = FptsDataBlock->u32StartAddr & 0x000000FF;
+    *(pu8FrameData) = (FptsDataBlock->u32StartAddr >> 16) & 0x000000FF;
+    *(pu8FrameData + 1) = (FptsDataBlock->u32StartAddr >> 8) & 0x000000FF;
+    *(pu8FrameData + 2) = FptsDataBlock->u32StartAddr & 0x000000FF;
 
-   Crc16_BufferUpdate(pu16CRC, pu8FrameData, 3);
-   pu8FrameData += 3;
+    Crc16_BufferUpdate(pu16CRC, pu8FrameData, 3);
+    pu8FrameData += 3;
 
-   for (u16Cnt = 0; u16Cnt < FptsDataBlock->u16Len; u16Cnt++)
-   {
-       *(pu8FrameData + u16Cnt) = FptsDataBlock->pu8Data[u16Cnt];
-   }
+    for (u16Cnt = 0; u16Cnt < FptsDataBlock->u16Len; u16Cnt++)
+    {
+        *(pu8FrameData + u16Cnt) = FptsDataBlock->pu8Data[u16Cnt];
+    }
 
-   Crc16_BufferUpdate(pu16CRC, pu8FrameData, FptsDataBlock->u16Len);
-   pu8FrameData += FptsDataBlock->u16Len;
+    Crc16_BufferUpdate(pu16CRC, pu8FrameData, FptsDataBlock->u16Len);
+    pu8FrameData += FptsDataBlock->u16Len;
 
-   /* XOR CRC16 */
-   u16Tmp = *(pu16CRC) ^ 0xFFFF;
-   /* Reverse CRC16 MSB/LSB */
-   *(pu8FrameData) = u16Tmp & 0x00FF;
-   *(pu8FrameData + 1) = (u16Tmp >> 8) & 0x00FF;
-   sprintf(pcLogString, "Generate block: address=0x%06X, length=%u(0x%03X), CRC frame=0x%02X%02X\r", FptsDataBlock->u32StartAddr,
-                                                                                 FptsDataBlock->u16Len,
-                                                                                 FptsDataBlock->u16Len,
-                                                                                 (uint8_t)u16Tmp,
-                                                                                 (uint8_t)(u16Tmp >> 8));
+    /* XOR CRC16 */
+    u16Tmp = *(pu16CRC) ^ 0xFFFF;
+    /* Reverse CRC16 MSB/LSB */
+    *(pu8FrameData) = u16Tmp & 0x00FF;
+    *(pu8FrameData + 1) = (u16Tmp >> 8) & 0x00FF;
+    sprintf(pcLogString, "Generate block: address=0x%06X, length=%u(0x%03X), CRC frame=0x%02X%02X\r", FptsDataBlock->u32StartAddr,
+            FptsDataBlock->u16Len,
+            FptsDataBlock->u16Len,
+            (uint8_t)u16Tmp,
+            (uint8_t)(u16Tmp >> 8));
     Logger_LineFeed();
     Logger_AppendArray(pcLogString, FptsDataBlock->pu8Data, FptsDataBlock->u16Len);
 #if PRINT_DEBUG_TRACE && PRINT_BLOCK_RAW
@@ -300,7 +300,7 @@ bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
         {
             printf("]");
         }
-        printf(" " );
+        printf(" ");
     }
     printf("\r\n");
 #endif
@@ -308,7 +308,7 @@ bool Bootloader_TransferData(tsDataBlock* FptsDataBlock)
     printf("[Sending]: @ 0x%06X : %u", FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len);
 #endif
 #if SEND_UART
-    if (ComPort_SendGenericFrame(&tsSendMsg, 110) == true)
+    if (ComPort_SendGenericFrame(&tsSendMsg, 4000) == true)
     {
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
         {
@@ -386,11 +386,10 @@ bool Bootloader_RequestBootSession(void)
     tsSendMsg.u8ID = eService_gotoBoot;
     tsSendMsg.u16Length = 0;
 
-
     printf("[Info]: Request boot session\r\n");
     Logger_Append("Info: Request boot session\r");
 #if SEND_UART
-    if (ComPort_SendGenericFrame(&tsSendMsg, 50) == true)
+    if (ComPort_SendGenericFrame(&tsSendMsg, 1000) == true)
     {
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
         {
@@ -420,21 +419,23 @@ bool Bootloader_CheckFlash(void)
     tsFrame tsSendMsg;
     char pcLogString[128];
     uint16_t u16CRC = su16CRCFlash ^ 0xFFFF;
-    tsSendMsg.u8ID = eService_checkFlash;
-    tsSendMsg.u16Length = 4;
-    tsSendMsg.pu8Payload[0] = u16CRC & 0xFF;
-    tsSendMsg.pu8Payload[1] = (u16CRC >> 8) & 0xFF;
-    tsSendMsg.pu8Payload[2] = (su16CRCBlockCnt >> 8) & 0x00FF;
-    tsSendMsg.pu8Payload[3] = su16CRCBlockCnt & 0x00FF;
-    printf("[Info]: Request flash check (0x%04X -> 0x%02X%02X)\r\n", su16CRCFlash,
-                                                                    tsSendMsg.pu8Payload[0],
-                                                                    tsSendMsg.pu8Payload[1]);
-    sprintf(pcLogString, "Info: Request flash check 0x%04X:0x%02X%02X\r",  su16CRCFlash,
-                                                                                tsSendMsg.pu8Payload[0],
-                                                                                tsSendMsg.pu8Payload[1]);
-    Logger_Append(pcLogString);
+    if (u8EndFlashFlag != 0)
+    {
+        tsSendMsg.u8ID = eService_checkFlash;
+        tsSendMsg.u16Length = 4;
+        tsSendMsg.pu8Payload[0] = u16CRC & 0xFF;
+        tsSendMsg.pu8Payload[1] = (u16CRC >> 8) & 0xFF;
+        tsSendMsg.pu8Payload[2] = (su16CRCBlockCnt >> 8) & 0x00FF;
+        tsSendMsg.pu8Payload[3] = su16CRCBlockCnt & 0x00FF;
+        printf("[Info]: Request flash check (0x%04X -> 0x%02X%02X)\r\n", su16CRCFlash,
+               tsSendMsg.pu8Payload[0],
+               tsSendMsg.pu8Payload[1]);
+        sprintf(pcLogString, "Info: Request flash check 0x%04X:0x%02X%02X\r", su16CRCFlash,
+                tsSendMsg.pu8Payload[0],
+                tsSendMsg.pu8Payload[1]);
+        Logger_Append(pcLogString);
 #if SEND_UART
-        if (ComPort_SendGenericFrame(&tsSendMsg, 1000) == true)
+        if (ComPort_SendGenericFrame(&tsSendMsg, 2000) == true)
         {
             if (tsSendMsg.pu8Response[0] == eOperationSuccess)
             {
@@ -446,18 +447,18 @@ bool Bootloader_CheckFlash(void)
             {
                 Bootloader_PrintErrcode(tsSendMsg.pu8Response[0]);
                 printf("[Target] : IVT=0x%02X%02X APP+IVT=0x%02X%02X CHECK=0x%02X%02X\r\n", tsSendMsg.pu8Response[1],
-                                                                                            tsSendMsg.pu8Response[2],
-                                                                                            tsSendMsg.pu8Response[3],
-                                                                                            tsSendMsg.pu8Response[4],
-                                                                                            tsSendMsg.pu8Response[5],
-                                                                                            tsSendMsg.pu8Response[6]);
+                       tsSendMsg.pu8Response[2],
+                       tsSendMsg.pu8Response[3],
+                       tsSendMsg.pu8Response[4],
+                       tsSendMsg.pu8Response[5],
+                       tsSendMsg.pu8Response[6]);
 
-                sprintf(pcLogString, "Target: IVT=0x%02X%02X APP+IVT=0x%02X%02X CHECK=0x%02X%02X\r",  tsSendMsg.pu8Response[1],
-                                                                                                        tsSendMsg.pu8Response[2],
-                                                                                                        tsSendMsg.pu8Response[3],
-                                                                                                        tsSendMsg.pu8Response[4],
-                                                                                                        tsSendMsg.pu8Response[5],
-                                                                                                        tsSendMsg.pu8Response[6]);
+                sprintf(pcLogString, "Target: IVT=0x%02X%02X APP+IVT=0x%02X%02X CHECK=0x%02X%02X\r", tsSendMsg.pu8Response[1],
+                        tsSendMsg.pu8Response[2],
+                        tsSendMsg.pu8Response[3],
+                        tsSendMsg.pu8Response[4],
+                        tsSendMsg.pu8Response[5],
+                        tsSendMsg.pu8Response[6]);
                 Logger_Append(pcLogString);
                 return false;
             }
@@ -469,8 +470,9 @@ bool Bootloader_CheckFlash(void)
             return false;
         }
 #else
-    return true;
+        return true;
 #endif
+    }
 }
 
 void Bootloader_NotifyEndFlash(void)
@@ -478,7 +480,7 @@ void Bootloader_NotifyEndFlash(void)
     u8EndFlashFlag = 1;
 }
 
-void Bootloader_ManageCrcData(tsDataBlock* FptsDataBlock)
+void Bootloader_ManageCrcData(tsDataBlock *FptsDataBlock)
 {
     uint16_t u16Cnt;
     uint16_t u16Tmp;

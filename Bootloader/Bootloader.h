@@ -62,6 +62,8 @@ typedef enum
     eFlashWriteError,
     eAppliCheckError,
     eBootSessionTimeout,
+    eBootIdle,
+    eBootAttention,
     eBootSupportedReturnCode
 } teOperationRetVal;
 
