@@ -303,8 +303,7 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
         printf(" ");
     }
     printf("\r\n");
-#endif
-#if !PRINT_DEBUG_TRACE
+#else
     printf("[Sending]: @ 0x%06X : %u", FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len);
 #endif
 #if SEND_UART
@@ -323,6 +322,7 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
         sprintf(pcLogString, "Target : %s\r", spcErrCode[tsSendMsg.pu8Response[0]]);
         Logger_Append(pcLogString);
 #else
+        printf("\r\n");
         Bootloader_PrintErrcode(tsSendMsg.pu8Response[0]);
 #endif
     }
@@ -350,7 +350,7 @@ bool Bootloader_RequestEraseFlash(void)
     printf("[Info]: Request flash erase...\r\n");
     Logger_Append("Info: Request flash erase...\r");
 #if SEND_UART
-    if (ComPort_SendGenericFrame(&tsSendMsg, 7000) == true)
+    if (ComPort_SendGenericFrame(&tsSendMsg, 10000) == true)
     {
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
         {
@@ -435,7 +435,7 @@ bool Bootloader_CheckFlash(void)
                 tsSendMsg.pu8Payload[1]);
         Logger_Append(pcLogString);
 #if SEND_UART
-        if (ComPort_SendGenericFrame(&tsSendMsg, 2000) == true)
+        if (ComPort_SendGenericFrame(&tsSendMsg, 5000) == true)
         {
             if (tsSendMsg.pu8Response[0] == eOperationSuccess)
             {

@@ -330,7 +330,7 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
 #if PRINT_DEBUG_TRACE && PRINT_BLOCK_CRC
             printf("<============================ [CRC]: Current block:%06X Prev:%06X Add blank: %u\r\n", pBlock->u32StartAddr, u32PrevAddr, u32AddrGap / BYTES_PER_BLOCK);
 #endif
-            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%06X to 0x%06X\r", u32AddrGap / BYTES_PER_BLOCK, u32PrevAddr, ADDR_START_BOOT);
+            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%06X to 0x%06X\r", (uint16_t)(u32AddrGap / BYTES_PER_BLOCK), u32PrevAddr, ADDR_START_BOOT);
             Logger_Append(pcLogString);
             while (u32AddrCnt < u32AddrGap)
             {
@@ -351,9 +351,9 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
             /* Add blanked block until current block start address */
             u32AddrGap = pBlock->u32StartAddr - u32PrevAddr;
 #if PRINT_DEBUG_TRACE && PRINT_BLOCK_CRC
-            printf("<============================ [CRC]: Current block: 0x%06X Prev:0x%06X Add blank: %u\r\n", pBlock->u32StartAddr, u32PrevAddr, u32AddrGap / BYTES_PER_BLOCK);
+            printf("<============================ [CRC]: Current block: 0x%06X Prev:0x%06X Add blank: %u\r\n", pBlock->u32StartAddr, u32PrevAddr, (uint16_t)(u32AddrGap / BYTES_PER_BLOCK));
 #endif
-            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%06X to 0x%06X\r", u32AddrGap / BYTES_PER_BLOCK, u32PrevAddr, pBlock->u32StartAddr);
+            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%06X to 0x%06X\r", (uint16_t)(u32AddrGap / BYTES_PER_BLOCK), u32PrevAddr, pBlock->u32StartAddr);
             Logger_Append(pcLogString);
             while (u32AddrCnt < u32AddrGap)
             {

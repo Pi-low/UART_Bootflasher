@@ -143,6 +143,7 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
                 Bootloader_PrintErrcode(*pu8Tmp);
             }
         }
+        spu8FrameFIFOIndex = 0;
     }
     else
     {
@@ -171,20 +172,6 @@ uint16_t ComPort_FetchIncomingFrames(int Fi16Timeout)
         u16DataAmount += u16Cnt;
     } while ((Fi16Timeout > 0) && ((u16DataAmount == 0) || (u16Cnt != 0))); /* Read data until no data to read or timeout*/
 
-#if PRINT_DEBUG_TRACE
-    printf("[COM Rx]: \r\n");
-    for(u16a = 0; u16a < u16DataAmount; u16a++)
-    {
-        if (((u16a % 32) == 0) && (u16a != 0))
-        {
-            printf("\r\n");
-        }
-        printf("%02X ", *(spu8RxBuf + u16a));
-    }
-    printf("\r\n");
-#endif // PRINT_DEBUG_TRACE
-    sprintf(pcLogString, "UART Rx:\r");
-    Logger_AppendArray(pcLogString, spu8RxBuf, u16DataAmount);
     pu8Buf = spu8RxBuf; /* Restore pointer to buffer start address */
 
     /* Searching for frames */
@@ -233,6 +220,26 @@ uint16_t ComPort_FetchIncomingFrames(int Fi16Timeout)
                 u16Cnt++;
             }
         }
+    }
+#if PRINT_DEBUG_TRACE
+        printf("[COM Rx]: \r\n");
+    for (u16a = 0; u16a < u16DataAmount; u16a++)
+    {
+        if (((u16a % 32) == 0) && (u16a != 0))
+        {
+            printf("\r\n");
+        }
+        printf("%02X ", *(spu8RxBuf + u16a));
+    }
+    printf("\r\n found %u\r\n", u16RetVal);
+#endif // PRINT_DEBUG_TRACE
+    sprintf(pcLogString, "UART Rx (%u):\r", u16DataAmount);
+    Logger_AppendArray(pcLogString, spu8RxBuf, u16DataAmount);
+    if (spu8FrameFIFOIndex == MAX_FRAME_FIFO_SIZE)
+    {
+        printf("[Error]: Rx Frame FIFO overflow\r\n");
+        sprintf(pcLogString, "UART Rx: FIFO overflow !\r");
+        Logger_Append(pcLogString);
     }
     return u16RetVal;
 }
