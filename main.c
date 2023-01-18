@@ -54,8 +54,8 @@ int main(int argc, char * argv[])
                 else
                 {
 #ifdef DEBUG_CONFIG
-                    pcString = (char*) malloc(strlen("test.hex") * sizeof(char));
-                    sprintf(pcString, "test.hex");
+                    pcString = (char*) malloc(strlen("test01.hex") * sizeof(char));
+                    sprintf(pcString, "test01.hex");
 #else
                     fflush(stdin);
                     pcString = (char*) malloc(256 * sizeof(char));
@@ -83,6 +83,8 @@ int main(int argc, char * argv[])
             break;
 
             case eStateTargetInfo:
+                ComPort_WaitForStartupSequence(10000);
+                Sleep(250);
                 bTmp &= Bootloader_RequestSwVersion(NULL);
                 bTmp &= Bootloader_RequestSwInfo(NULL);
                 if (bTmp)

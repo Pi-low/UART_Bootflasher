@@ -12,6 +12,8 @@
 void ComPort_Scan(void);
 bool ComPort_Open(char* FpcString);
 void ComPort_Close(void);
+void ComPort_WaitForStartupSequence(uint16_t Fu16Timeout);
+void ComPort_SendStandaloneFrame(tsFrame* FptsMsg);
 bool ComPort_SendGenericFrame(tsFrame* FptsSendMsg, uint16_t Fu16Timeout);
 
 #endif // COMPORT_H_INCLUDED
