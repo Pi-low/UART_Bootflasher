@@ -35,6 +35,7 @@ typedef struct
 
 typedef enum
 {
+    eBoot =                     0x00,
     eService_gotoBoot =         0x01,
     eService_echo =             0x02,
     eService_getInfo =          0x03,
@@ -62,6 +63,8 @@ typedef enum
     eFlashWriteError,
     eAppliCheckError,
     eBootSessionTimeout,
+    eBootIdle,
+    eBootAttention,
     eBootSupportedReturnCode
 } teOperationRetVal;
 
