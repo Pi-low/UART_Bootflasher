@@ -219,13 +219,14 @@ void ComPort_SendStandaloneFrame(tsFrame* FptsMsg)
     u8pBufTx[1] = FptsMsg->u8ID;
     u8pBufTx[2] = (FptsMsg->u16Length + 1) >> 8;
     u8pBufTx[3] = FptsMsg->u16Length + 1;
+
     memcpy(u8pBufTx + 4, FptsMsg->pu8Payload, FptsMsg->u16Length);
 
-    for (u16Cnt = 1; u16Cnt < FptsMsg->u16Length + 3; u16Cnt++)
+    for (u16Cnt = 1; u16Cnt < FptsMsg->u16Length + 4; u16Cnt++)
     {
         u8Checksum += u8pBufTx[u16Cnt];
     }
-    u8pBufTx[FptsMsg->u16Length + 4] = ~u8Checksum;
+    u8pBufTx[u16Cnt] = ~u8Checksum;
 
 #if PRINT_DEBUG_TRACE
     printf("[COM Tx]: ");
@@ -255,9 +256,11 @@ bool ComPort_WaitForStartupSequence(uint16_t Fu16Timeout)
     printf("Please reset the device within %us\r\nWaiting for startup sequence...\r\n", Fu16Timeout / 1000);
     sprintf(pcLogString, "Tool: Waiting for startup sequence\r");
     Logger_Append(pcLogString);
-    tsMsg.u8ID = eService_echo;
-    sprintf(tsMsg.pu8Payload, "Echo!");
-    tsMsg.u16Length = strlen(tsMsg.pu8Payload);
+
+    tsMsg.u8ID = eBoot;
+    tsMsg.pu8Payload[0] = 1;
+    tsMsg.u16Length = 1;
+
     RS232_flushRX(siComPortNumber);
     /* Receive data */
     u16NbRxFrm = ComPort_FetchIncomingFrames(Fu16Timeout);
@@ -279,7 +282,7 @@ bool ComPort_WaitForStartupSequence(uint16_t Fu16Timeout)
     }
     if (u8CatchStartup != 0)
     {
-        ComPort_SendStandaloneFrame(&tsMsg);
+        ComPort_SendGenericFrame(&tsMsg, 1000);
         printf("[Info]: Catch startup !\n");
         sprintf(pcLogString, "Tool: catch startup\r");
         Logger_Append(pcLogString);

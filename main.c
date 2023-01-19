@@ -84,7 +84,7 @@ int main(int argc, char * argv[])
 
             case eStateTargetInfo:
                 ComPort_WaitForStartupSequence(10000);
-                Sleep(250);
+                Sleep(100);
                 bTmp &= Bootloader_RequestSwVersion(NULL);
                 bTmp &= Bootloader_RequestSwInfo(NULL);
                 if (bTmp)
