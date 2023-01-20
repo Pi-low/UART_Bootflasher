@@ -9,6 +9,8 @@
 #include "Logger/Logger.h"
 
 uint32_t main_GetFileSize(FILE* FpHexFile);
+const char* pcBuildDateTime = __DATE__ " " __TIME__;
+const uint8_t u8ToolVersion = 1;
 
 int main(int argc, char * argv[])
 {
@@ -25,7 +27,7 @@ int main(int argc, char * argv[])
     char pcBuffer[10];
     bool bTmp = true;
     Logger_Init();
-
+    printf("BigBrain flashing tool\r\nBuild: %s\r\nRelease: %02u\r\n\r\n", pcBuildDateTime, u8ToolVersion);
     while (u8KeepLoop)
     {
         switch(teMainCurrentState)
@@ -126,6 +128,7 @@ int main(int argc, char * argv[])
                 if (pcBuffer[0] == 'y')
                 {
                     teMainCurrentState = eStateTargetInfo;
+                    bTmp = true;
                 }
                 else
                 {

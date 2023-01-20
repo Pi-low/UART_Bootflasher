@@ -16,10 +16,11 @@ static tsDataBlock tsCRCDatablock;
 static uint8_t pu8LogisticData[128];
 static uint8_t u8SwMajor = 0;
 static uint8_t u8SwMinor = 0;
-static uint8_t pu8Buff[256];
-static uint16_t u16BufLen = 0;
-static uint8_t pu8Saved[EXTENSION];
-static uint32_t su32SavedLen = 0;
+static uint8_t pu8LogisticBuff[256];
+static uint16_t u16LogisticBufLen = 0;
+static uint8_t pu8PreParserSavedData[EXTENSION];
+static uint32_t su32PreParserSavedLen = 0;
+static uint32_t su32CrcBlockPrevAddr = 0;
 
 /* ------------------------------------------------------------ */
 /* Static functions declaration                                 */
@@ -47,11 +48,12 @@ void Core_InitDataBlockGen(void)
     tsCurrentDatablock.u32StartAddr = 0;
     tsCurrentDatablock.u32EndAddr = BYTES_PER_BLOCK;
     tsCurrentDatablock.u16Len = 0;
-    su32SavedLen = 0;
+    su32PreParserSavedLen = 0;
 }
 
 void Core_InitCRCBlockGen(void)
 {
+    su32CrcBlockPrevAddr = 0;
     tsCRCDatablock.u32StartAddr = 0;
     tsCRCDatablock.u32EndAddr = BYTES_PER_BLOCK;
     tsCRCDatablock.u16Len = 0;
@@ -169,10 +171,10 @@ bool Core_CbFetchLogisticData(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint
     {
         for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
         {
-            pu8Buff[u16BufLen] = *(Fpu8Buffer + u16Cnt);
-            u16BufLen++;
+            pu8LogisticBuff[u16LogisticBufLen] = *(Fpu8Buffer + u16Cnt);
+            u16LogisticBufLen++;
         }
-        if (u16BufLen == BYTES_PER_BLOCK)
+        if (u16LogisticBufLen == BYTES_PER_BLOCK)
         {
             Core_FormatDecription();
         }
@@ -181,11 +183,11 @@ bool Core_CbFetchLogisticData(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint
     {
         for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
         {
-            pu8Buff[u16BufLen] = *(Fpu8Buffer + u16Cnt);
-            u16BufLen++;
+            pu8LogisticBuff[u16LogisticBufLen] = *(Fpu8Buffer + u16Cnt);
+            u16LogisticBufLen++;
         }
-        u8SwMinor = pu8Buff[0];
-        u8SwMajor = pu8Buff[1];
+        u8SwMinor = pu8LogisticBuff[0];
+        u8SwMajor = pu8LogisticBuff[1];
         bRetVal = false;
     }
     if (Fu32addr >= ADDR_START_APPLI)
@@ -207,16 +209,16 @@ void Core_PreParse(uint8_t *Fpu8Buffer, uint32_t *Fpu32Len)
     uint8_t* pu8char = NULL;
     uint8_t pu8TmpBuf[ALLOCATION_SIZE];
 
-    if (su32SavedLen != 0)
+    if (su32PreParserSavedLen != 0)
     {
         for (u32Tmp = 0; u32Tmp < *Fpu32Len; u32Tmp++)
         {
             pu8TmpBuf[u32Tmp] = *(Fpu8Buffer + u32Tmp);
         }
 
-        for (u8Tmp = 0; u8Tmp < su32SavedLen; u8Tmp++)
+        for (u8Tmp = 0; u8Tmp < su32PreParserSavedLen; u8Tmp++)
         {
-            *(Fpu8Buffer + u8Tmp) = pu8Saved[u8Tmp];
+            *(Fpu8Buffer + u8Tmp) = pu8PreParserSavedData[u8Tmp];
         }
         u32Tmp = 0;
 
@@ -225,8 +227,8 @@ void Core_PreParse(uint8_t *Fpu8Buffer, uint32_t *Fpu32Len)
             *(Fpu8Buffer + u8Tmp + u32Tmp) = pu8TmpBuf[u32Tmp];
             u32Tmp++;
         }
-        *Fpu32Len += su32SavedLen;
-        su32SavedLen = 0;
+        *Fpu32Len += su32PreParserSavedLen;
+        su32PreParserSavedLen = 0;
     }
 
     while (u32Index < *Fpu32Len)
@@ -249,11 +251,11 @@ void Core_PreParse(uint8_t *Fpu8Buffer, uint32_t *Fpu32Len)
             }
             else
             {
-                su32SavedLen = *Fpu32Len - u32PrevLineStart;
+                su32PreParserSavedLen = *Fpu32Len - u32PrevLineStart;
 
-                for (u8Tmp = 0; u8Tmp < su32SavedLen; u8Tmp++)
+                for (u8Tmp = 0; u8Tmp < su32PreParserSavedLen; u8Tmp++)
                 {
-                    pu8Saved[u8Tmp] = *(pu8char + u8Tmp);
+                    pu8PreParserSavedData[u8Tmp] = *(pu8char + u8Tmp);
                 }
 
                 *Fpu32Len = u32PrevLineStart;
@@ -286,13 +288,12 @@ bool Core_SendBlock(uint32_t Fu32NewStartAddr)
 
 void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
 {
-    static uint32_t u32PrevAddr = 0;
     char pcLogString[256];
-    uint32_t u32CurStartAddr = FptsDataBlock->u32StartAddr;
+    //uint32_t u32CurStartAddr = FptsDataBlock->u32StartAddr;
     tsDataBlock *pBlock = FptsDataBlock;
     tsDataBlock tsBlankedBlock;
     uint8_t *Pu8Data = FptsDataBlock->pu8Data;
-    uint16_t u16Cnt = 0;
+    //uint16_t u16Cnt = 0;
     uint32_t u32AddrGap = 0;
     uint32_t u32AddrCnt = 0;
 
@@ -312,25 +313,25 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
 /* ----------------------------------- */
 /*    Manage CRC for current block     */
 /* ----------------------------------- */
-    if (u32PrevAddr == FptsDataBlock->u32StartAddr)
+    if (su32CrcBlockPrevAddr == FptsDataBlock->u32StartAddr)
     {
         /* Boundary aligned block */
         Bootloader_ManageCrcData(pBlock);
-        u32PrevAddr = pBlock->u32EndAddr;
+        su32CrcBlockPrevAddr = pBlock->u32EndAddr;
     }
     else
     {
-        tsBlankedBlock.u32StartAddr = u32PrevAddr;
+        tsBlankedBlock.u32StartAddr = su32CrcBlockPrevAddr;
         tsBlankedBlock.u32EndAddr = pBlock->u32StartAddr + BYTES_PER_BLOCK;
 
-        if ((pBlock->u32StartAddr > u32PrevAddr) && (pBlock->u32StartAddr == ADDR_START_APPLI))
+        if ((pBlock->u32StartAddr > su32CrcBlockPrevAddr) && (pBlock->u32StartAddr == ADDR_START_APPLI))
         {
             /* Add blanked block until bootloader start address */
-            u32AddrGap = ADDR_START_BOOT - u32PrevAddr;
+            u32AddrGap = ADDR_START_BOOT - su32CrcBlockPrevAddr;
 #if PRINT_DEBUG_TRACE && PRINT_BLOCK_CRC
             printf("<============================ [CRC]: Current block:%06X Prev:%06X Add blank: %u\r\n", pBlock->u32StartAddr, u32PrevAddr, u32AddrGap / BYTES_PER_BLOCK);
 #endif
-            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%06X to 0x%06X\r", (uint16_t)(u32AddrGap / BYTES_PER_BLOCK), u32PrevAddr, ADDR_START_BOOT);
+            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%06X to 0x%06X\r", (uint16_t)(u32AddrGap / BYTES_PER_BLOCK), su32CrcBlockPrevAddr, ADDR_START_BOOT);
             Logger_Append(pcLogString);
             while (u32AddrCnt < u32AddrGap)
             {
@@ -346,14 +347,14 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
             sprintf(pcLogString, "CRC IVT=0x%04X\r", Bootloader_GetCrcData());
             Logger_Append(pcLogString);
         }
-        else if (pBlock->u32StartAddr > u32PrevAddr)
+        else if (pBlock->u32StartAddr > su32CrcBlockPrevAddr)
         {
             /* Add blanked block until current block start address */
-            u32AddrGap = pBlock->u32StartAddr - u32PrevAddr;
+            u32AddrGap = pBlock->u32StartAddr - su32CrcBlockPrevAddr;
 #if PRINT_DEBUG_TRACE && PRINT_BLOCK_CRC
             printf("<============================ [CRC]: Current block: 0x%06X Prev:0x%06X Add blank: %u\r\n", pBlock->u32StartAddr, u32PrevAddr, (uint16_t)(u32AddrGap / BYTES_PER_BLOCK));
 #endif
-            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%06X to 0x%06X\r", (uint16_t)(u32AddrGap / BYTES_PER_BLOCK), u32PrevAddr, pBlock->u32StartAddr);
+            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%08X to 0x%08X\r", (uint16_t)(u32AddrGap / BYTES_PER_BLOCK), su32CrcBlockPrevAddr, pBlock->u32StartAddr);
             Logger_Append(pcLogString);
             while (u32AddrCnt < u32AddrGap)
             {
@@ -375,7 +376,7 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
         printf("[CRC] Resume with current block: 0x%06X Prev:0x%06X ================================>\r\n", pBlock->u32StartAddr, u32PrevAddr);
 #endif
         Bootloader_ManageCrcData(pBlock);
-        u32PrevAddr = pBlock->u32EndAddr;
+        su32CrcBlockPrevAddr = pBlock->u32EndAddr;
     }
 }
 
@@ -395,15 +396,15 @@ void Core_FormatDecription(void)
 {
     uint16_t u16Cnt = 0;
     uint16_t u16Index = 0;
-    while (u16Cnt < u16BufLen)
+    while (u16Cnt < u16LogisticBufLen)
     {
-        pu8LogisticData[u16Index] = pu8Buff[u16Cnt];
+        pu8LogisticData[u16Index] = pu8LogisticBuff[u16Cnt];
         u16Index ++;
-        pu8LogisticData[u16Index] = pu8Buff[u16Cnt + 1];
+        pu8LogisticData[u16Index] = pu8LogisticBuff[u16Cnt + 1];
         u16Index ++;
         u16Cnt += 4;
     }
-    u16BufLen = 0;
+    u16LogisticBufLen = 0;
 }
 
 void Core_GetSwInfo(uint16_t* Fpu16Version, uint8_t* Fpu8Decription)

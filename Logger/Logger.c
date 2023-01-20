@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
+#include "../main.h"
 #include "Logger.h"
 
 FILE * LogStream = NULL;
@@ -22,7 +23,7 @@ void Logger_Init(void)
     strftime(pcDateTime, 20, "%Y-%m-%d %H:%M:%S", pTime);
     if (LogStream != NULL)
     {
-        fprintf(LogStream, "[%s]: Bootloader session start\r", pcDateTime);
+        fprintf(LogStream, "Tool build: %s\rRelease: %02u\r[%s]: Bootloader session start\r", pcBuildDateTime, u8ToolVersion, pcDateTime);
     }
 }
 

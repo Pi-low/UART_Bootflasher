@@ -343,7 +343,6 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
 bool Bootloader_RequestEraseFlash(void)
 {
     tsFrame tsSendMsg;
-    char pcLogString[128];
     tsSendMsg.u8ID = eService_eraseFlash;
     tsSendMsg.u16Length = 0;
 
@@ -382,7 +381,6 @@ bool Bootloader_RequestEraseFlash(void)
 bool Bootloader_RequestBootSession(void)
 {
     tsFrame tsSendMsg;
-    char pcLogString[128];
     tsSendMsg.u8ID = eService_gotoBoot;
     tsSendMsg.u16Length = 0;
 
@@ -473,6 +471,10 @@ bool Bootloader_CheckFlash(void)
         return true;
 #endif
     }
+    else
+    {
+        return false;
+    }
 }
 
 void Bootloader_NotifyEndFlash(void)
@@ -482,10 +484,9 @@ void Bootloader_NotifyEndFlash(void)
 
 void Bootloader_ManageCrcData(tsDataBlock *FptsDataBlock)
 {
-    uint16_t u16Cnt;
-    uint16_t u16Tmp;
     char pcLogString[128];
 #if PRINT_DEBUG_TRACE && PRINT_BLOCK_CRC
+    uint16_t u16Cnt;
     printf("\r\n[CRC]: Block %u: 0x%06X (%u)\r\n", su16CRCBlockCnt, FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len);
     for (u16Cnt = 0; u16Cnt < FptsDataBlock->u16Len; u16Cnt++)
     {

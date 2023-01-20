@@ -10,4 +10,7 @@ typedef enum
     eStateQuit
 } teMainStates;
 
+extern const char* pcBuildDateTime;
+extern const uint8_t u8ToolVersion;
+
 #endif // MAIN_H_INCLUDED
