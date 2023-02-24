@@ -287,12 +287,15 @@ bool Core_SendBlock(uint32_t Fu32NewStartAddr)
    bool bRetVal = true;
    uint32_t u32OffsetAddr = 0;
    /* Send the block */
-    bRetVal = Bootloader_TransferData(&tsCurrentDatablock);
 
-    if (tsCurrentDatablock.u32StartAddr < ADDR_APPL_END)
-    {
-        Core_ManageCrcBlock(&tsCurrentDatablock);
-    }
+   if (tsCurrentDatablock.u16Len != 0)
+   {
+       bRetVal = Bootloader_TransferData(&tsCurrentDatablock);
+       if (tsCurrentDatablock.u32StartAddr < ADDR_APPL_END)
+       {
+           Core_ManageCrcBlock(&tsCurrentDatablock);
+       }
+   }
 
     /* Prepare next block */
     tsCurrentDatablock.u16CRCBlock = 0;
