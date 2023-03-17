@@ -77,7 +77,7 @@ bool ComPort_Open(char* FpcString)
     else
     {
         sbComOpened = true;
-        sprintf(pcLogString, "COM%u opened\r", spu8ListComPort[siComPortNumber]);
+        sprintf(pcLogString, "COM%u opened\r\n", spu8ListComPort[siComPortNumber]);
         Logger_Append(pcLogString);
     }
     return bRetVal;
@@ -128,7 +128,7 @@ bool ComPort_SendGenericFrame(tsFrame* FptsMsg, uint16_t Fu16Timeout)
     {
         bRetVal = false;
         printf("[Error]: No response from device\r\n");
-        sprintf(pcLogString, "UART Rx: No response from device\r");
+        sprintf(pcLogString, "UART Rx: No response from device\r\n");
         Logger_Append(pcLogString);
     }
 
@@ -181,7 +181,7 @@ uint16_t ComPort_FetchIncomingFrames(int16_t Fi16Timeout)
                 {
                     /* Error: wrong checksum */
                     printf("[Error]: wrong checksum\r\n");
-                    sprintf(pcLogString, "UART Rx: wrong checksum !\r");
+                    sprintf(pcLogString, "UART Rx: wrong checksum !\r\n");
                     Logger_Append(pcLogString);
                 }
             }
@@ -189,7 +189,7 @@ uint16_t ComPort_FetchIncomingFrames(int16_t Fi16Timeout)
             {
                 /* Error: wrong frame length */
                 printf("[Error]: incorrect length\r\n");
-                sprintf(pcLogString, "UART Rx: incorrect frame length !\r");
+                sprintf(pcLogString, "UART Rx: incorrect frame length !\r\n");
                 Logger_Append(pcLogString);
             }
         }
@@ -214,12 +214,12 @@ uint16_t ComPort_FetchIncomingFrames(int16_t Fi16Timeout)
     }
     printf("\r\n found %u\r\n", u16RetVal);
 #endif // PRINT_DEBUG_TRACE
-    sprintf(pcLogString, "UART Rx (%u):\r", u16DataAmount);
+    sprintf(pcLogString, "UART Rx (%u):\r\n", u16DataAmount);
     Logger_AppendArray(pcLogString, spu8RxBuf, u16DataAmount);
     if (spu8FrameFIFOIndex == MAX_FRAME_FIFO_SIZE)
     {
         printf("[Error]: Rx Frame FIFO overflow\r\n");
-        sprintf(pcLogString, "UART Rx: FIFO overflow !\r");
+        sprintf(pcLogString, "UART Rx: FIFO overflow !\r\n");
         Logger_Append(pcLogString);
     }
     return u16RetVal;
@@ -258,7 +258,7 @@ void ComPort_SendStandaloneFrame(tsFrame* FptsMsg)
     }
     printf("\r\n");
 #endif // PRINT_DEBUG_TRACE
-    sprintf(pcLogString, "UART Tx:\r");
+    sprintf(pcLogString, "UART Tx:\r\n");
     Logger_AppendArray(pcLogString, u8pBufTx, u16FrmLength);
     RS232_flushRX(siComPortNumber);
     RS232_SendBuf(siComPortNumber, u8pBufTx, FptsMsg->u16Length + 5);
@@ -272,7 +272,7 @@ bool ComPort_WaitForStartupSequence(uint16_t Fu16Timeout)
     tsFrame tsMsg;
     char pcLogString[1024];
     printf("Please reset the device within %us\r\nWaiting for startup sequence...\r\n", Fu16Timeout / 1000);
-    sprintf(pcLogString, "Tool: Waiting for startup sequence\r");
+    sprintf(pcLogString, "Tool: Waiting for startup sequence\r\n");
     Logger_Append(pcLogString);
 
     tsMsg.u8ID = eBoot;
@@ -302,20 +302,20 @@ bool ComPort_WaitForStartupSequence(uint16_t Fu16Timeout)
     {
         ComPort_SendGenericFrame(&tsMsg, 1000);
         printf("[Info]: Catch startup !\n");
-        sprintf(pcLogString, "Tool: catch startup\r");
+        sprintf(pcLogString, "Tool: catch startup\r\n");
         Logger_Append(pcLogString);
     }
     else
     {
         printf("[Info]: Startup sequence not caught\r\n");
-        sprintf(pcLogString, "Tool: Startup sequence not caught\r");
+        sprintf(pcLogString, "Tool: Startup sequence not caught\r\n");
         Logger_Append(pcLogString);
         bRetVal = false;
     }
     if (u8CatchIdle != 0)
     {
         printf("[Info]:Startup sequence not caught, target in idle (boot) mode\r\n");
-        sprintf(pcLogString, "Tool: Startup sequence not caught, target in idle (boot) mode\r");
+        sprintf(pcLogString, "Tool: Startup sequence not caught, target in idle (boot) mode\r\n");
         Logger_Append(pcLogString);
     }
     return bRetVal;

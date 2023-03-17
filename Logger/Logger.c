@@ -37,11 +37,11 @@ void Logger_Init(void)
     strftime(pcDateTime, 20, "%Y-%m-%d_%H.%M.%S", pTime);
     sprintf(pcFileName, "%s_log.txt", pcDateTime);
 
-    LogStream = fopen(pcFileName, "w+");
+    LogStream = fopen(pcFileName, "wb+");
     strftime(pcDateTime, 20, "%Y-%m-%d %H:%M:%S", pTime);
     if (LogStream != NULL)
     {
-        fprintf(LogStream, "Tool build: %s\rRelease: %02u\r[%s]: Bootloader session start\r", pcBuildDateTime, u8ToolVersion, pcDateTime);
+        fprintf(LogStream, "Tool build: %s\r\nRelease: %02u\r\n[%s]: Bootloader session start\r\n", pcBuildDateTime, u8ToolVersion, pcDateTime);
     }
 }
 
@@ -69,13 +69,13 @@ void Logger_AppendArray(char *FpcText, uint8_t *Fpu8Array, uint16_t Fu16Len)
         {
             if ((u16Index != 0) && ((u16Index % LOG_GROUP_BYTE_PER_LINE) == 0))
             {
-                sprintf(pcSmallString, "\r");
+                sprintf(pcSmallString, "\r\n");
                 strcat(FpcText, pcSmallString);
             }
             sprintf(pcSmallString, "%02X ", Fpu8Array[u16Index]);
             strcat(FpcText, pcSmallString);
         }
-        sprintf(pcSmallString, "\r");
+        sprintf(pcSmallString, "\r\n");
         strcat(FpcText, pcSmallString);
         Logger_Append(FpcText);
     }
@@ -85,13 +85,13 @@ void Logger_LineFeed(void)
 {
     if (LogStream != NULL)
     {
-        fprintf(LogStream, "\r");
+        fprintf(LogStream, "\r\n");
     }
 }
 
 void Logger_Close(void)
 {
-    Logger_Append("Log Session end\r");
+    Logger_Append("Log Session end\r\n");
     if (LogStream != NULL)
     {
         fclose(LogStream);

@@ -98,5 +98,6 @@ bool Bootloader_CheckFlash(void);
 void Bootloader_NotifyEndFlash(void);
 void Bootloader_ManageCrcData(tsDataBlock* FptsDataBlock);
 uint16_t Bootloader_GetCrcData(void);
+void Bootloader_SetFileSize(uint32_t Fu32Size);
 
 #endif // BOOTLOADER_H_INCLUDED

@@ -352,7 +352,7 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
 #if PRINT_DEBUG_TRACE && PRINT_BLOCK_CRC
             printf("<============================ [CRC]: Current block:%06X Prev:%06X Add blank: %u\r\n", pBlock->u32StartAddr, u32PrevAddr, u32AddrGap / BYTES_PER_BLOCK);
 #endif
-            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%06X to 0x%06X\r", (uint16_t)(u32AddrGap / BYTES_PER_BLOCK), su32CrcBlockPrevAddr, ADDR_START_BOOT);
+            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%06X to 0x%06X\r\n", (uint16_t)(u32AddrGap / BYTES_PER_BLOCK), su32CrcBlockPrevAddr, ADDR_START_BOOT);
             Logger_Append(pcLogString);
             while (u32AddrCnt < u32AddrGap)
             {
@@ -375,7 +375,7 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
 #if PRINT_DEBUG_TRACE && PRINT_BLOCK_CRC
             printf("<============================ [CRC]: Current block: 0x%06X Prev:0x%06X Add blank: %u\r\n", pBlock->u32StartAddr, u32PrevAddr, (uint16_t)(u32AddrGap / BYTES_PER_BLOCK));
 #endif
-            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%08X to 0x%08X\r", (uint16_t)(u32AddrGap / BYTES_PER_BLOCK), su32CrcBlockPrevAddr, pBlock->u32StartAddr);
+            sprintf(pcLogString, "CRC: Add %u blank row(s) from 0x%08X to 0x%08X\r\n", (uint16_t)(u32AddrGap / BYTES_PER_BLOCK), su32CrcBlockPrevAddr, pBlock->u32StartAddr);
             Logger_Append(pcLogString);
             while (u32AddrCnt < u32AddrGap)
             {
@@ -388,7 +388,7 @@ void Core_ManageCrcBlock(tsDataBlock *FptsDataBlock)
         }
         else
         {
-            Logger_Append("Warning : Core_ManageCrcBlock exception at 0x%06X\r");
+            Logger_Append("Warning : Core_ManageCrcBlock exception at 0x%06X\r\n");
             printf("[Warning]: Core_ManageCrcBlock exception at 0x%06X\r\n", pBlock->u32StartAddr);
             system("pause");
         }
@@ -431,7 +431,7 @@ void Core_FormatDecription(void)
 void Core_GetSwInfo(uint16_t* Fpu16Version, uint8_t* Fpu8Decription)
 {
     char pcLogString[512];
-    sprintf(pcLogString, "\r      Hexfile SW Version : %02X.%02X\r      Hexfile SW Info : %s\r", u8SwMajor, u8SwMinor, pu8LogisticData);
+    sprintf(pcLogString, "\r\n      Hexfile SW Version : %02X.%02X\r\n      Hexfile SW Info : %s\r\n", u8SwMajor, u8SwMinor, pu8LogisticData);
     Logger_Append(pcLogString);
     printf("[File SW Version]: %02X.%02X \r\n[File SW Info]: %s\r\n", u8SwMajor, u8SwMinor, pu8LogisticData);
     if (Fpu16Version != NULL)

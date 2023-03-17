@@ -44,7 +44,6 @@ int main(int argc, char * argv[])
     char *pcString = NULL;
     char pcBuffer[10];
     bool bTmp = true;
-    Logger_Init();
     printf("BigBrain flashing tool\r\nBuild: %s\r\nRelease: %02u\r\n\r\n", pcBuildDateTime, u8ToolVersion);
     while (u8KeepLoop)
     {
@@ -86,7 +85,8 @@ int main(int argc, char * argv[])
                 MyFile = fopen(pcString, "rb");
                 if (MyFile != NULL)
                 {
-                    sprintf(pcLogString, "Open file: %s\r", pcString);
+                    Logger_Init();
+                    sprintf(pcLogString, "Open file: %s\r\n", pcString);
                     Logger_Append(pcLogString);
                     printf("Open: \"%s\"\r\n", pcString);
                     u32TotalFileSize = main_GetFileSize(MyFile);
@@ -97,7 +97,7 @@ int main(int argc, char * argv[])
                 else
                 {
                     printf("[Error]: Cannot open file, exit program !\r\n");
-                    Logger_Append("Error: Cannot open file, exit program !\r");
+                    Logger_Append("Error: Cannot open file, exit program !\r\n");
                     teMainCurrentState = eStateQuit;
                 }
             break;
@@ -114,7 +114,7 @@ int main(int argc, char * argv[])
                 else
                 {
                     printf("[Error]: Abort operation !\r\n");
-                    Logger_Append("Error: Abort operation !\r");
+                    Logger_Append("Error: Abort operation !\r\n");
                     teMainCurrentState = eStateQuit;
                 }
             break;
@@ -132,7 +132,7 @@ int main(int argc, char * argv[])
                     else
                     {
                         printf("[Error]: Abort operation !\r\n");
-                        Logger_Append("Error: Abort operation !\r");
+                        Logger_Append("Error: Abort operation !\r\n");
                     }
                 }
                 teMainCurrentState = eStateQuit;
@@ -145,17 +145,12 @@ int main(int argc, char * argv[])
                 scanf("%[^\n]", pcBuffer);
                 if (pcBuffer[0] == 'y')
                 {
-                    teMainCurrentState = eStateTargetInfo;
+                    teMainCurrentState = eStateSelectComPort;
                     bTmp = true;
                 }
                 else
                 {
                     u8KeepLoop = 0;
-                    if (MyFile != NULL)
-                    {
-                        fclose(MyFile);
-                    }
-                    ComPort_Close();
                 }
             break;
 
@@ -164,6 +159,11 @@ int main(int argc, char * argv[])
             break;
         }
     }
+    if (MyFile != NULL)
+    {
+        fclose(MyFile);
+    }
+    ComPort_Close();
     Logger_Close();
     return EXIT_SUCCESS;
 }
@@ -175,5 +175,6 @@ uint32_t main_GetFileSize(FILE* FpHexFile)
     {
         u32FileSize = ftell(FpHexFile);
     }
+    Bootloader_SetFileSize(u32FileSize);
     return u32FileSize;
 }

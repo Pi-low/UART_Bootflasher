@@ -29,6 +29,7 @@
 #include "../Config.h"
 #include "Bootloader.h"
 
+static uint32_t su32FileSize = 0;
 static uint8_t spu8DataBuffer[ALLOCATION_SIZE + EXTENSION];
 static uint16_t su16CRCFlash = 0;
 static uint32_t su32CurFlashAddr = 0;
@@ -136,7 +137,7 @@ bool Bootloader_GetInfoFromiHexFile(FILE *FpHexFile, uint32_t Fu32FileSize)
 void Bootloader_PrintErrcode(uint8_t Fu8ErrCode)
 {
     char pcLogString[64];
-    sprintf(pcLogString, "Target: %s\r", spcErrCode[Fu8ErrCode]);
+    sprintf(pcLogString, "Target: %s\r\n", spcErrCode[Fu8ErrCode]);
     Logger_Append(pcLogString);
     printf("[Target]: %s\r\n", spcErrCode[Fu8ErrCode]);
 }
@@ -152,7 +153,7 @@ bool Bootloader_RequestSwVersion(uint16_t *Fpu16Version)
 #if PRINT_DEBUG_TRACE
     printf("[Info]: Request SW version\r\n");
 #endif
-    Logger_Append("Info: Request SW version\r");
+    Logger_Append("Info: Request SW version\r\n");
 #if SEND_UART
     if (ComPort_SendGenericFrame(&tsSendMsg, 1000) == true)
     {
@@ -168,12 +169,12 @@ bool Bootloader_RequestSwVersion(uint16_t *Fpu16Version)
             if ((tsSendMsg.pu8Response[1] == 0xFF) && (tsSendMsg.pu8Response[2] == 0xFF))
             {
                 printf("[Info]: no version, memory blank\r\n");
-                Logger_Append("Info: no version, memory blank\r");
+                Logger_Append("Info: no version, memory blank\r\n");
             }
             else
             {
                 printf("[Target SW version]: %02X.%02X\r\n", tsSendMsg.pu8Response[1], tsSendMsg.pu8Response[2]);
-                sprintf(pcLogString, "Target SW version: %02X.%02X\r", tsSendMsg.pu8Response[1], tsSendMsg.pu8Response[2]);
+                sprintf(pcLogString, "Target SW version: %02X.%02X\r\n", tsSendMsg.pu8Response[1], tsSendMsg.pu8Response[2]);
                 Logger_Append(pcLogString);
             }
             return true;
@@ -187,7 +188,7 @@ bool Bootloader_RequestSwVersion(uint16_t *Fpu16Version)
     else
     {
         printf("[Error]: No response from target!\r\n");
-        Logger_Append("Error: No response from target!\r");
+        Logger_Append("Error: No response from target!\r\n");
         return false;
     }
 #else
@@ -208,7 +209,7 @@ bool Bootloader_RequestSwInfo(uint8_t *Fpu8Buf)
 #if PRINT_DEBUG_TRACE
     printf("Info: Request SW info\r\n");
 #endif
-    Logger_Append("Info: Request SW info\r");
+    Logger_Append("Info: Request SW info\r\n");
 #if SEND_UART
     if (Fpu8Buf != NULL)
     {
@@ -226,13 +227,13 @@ bool Bootloader_RequestSwInfo(uint8_t *Fpu8Buf)
             if (tsSendMsg.pu8Response[1] == 0xFF)
             {
                 printf("[Info]: no software info, memory blank\r\n");
-                Logger_Append("Info: no software info, memory blank\r");
+                Logger_Append("Info: no software info, memory blank\r\n");
             }
             else
             {
                 memcpy(pu8Intern, &tsSendMsg.pu8Response[1], 128);
                 printf("[Target SW Info]: %s\r\n", pu8Intern);
-                sprintf(pcLogString, "Target SW Info: %s\r", pu8Intern);
+                sprintf(pcLogString, "Target SW Info: %s\r\n", pu8Intern);
                 Logger_Append(pcLogString);
             }
             return true;
@@ -246,7 +247,7 @@ bool Bootloader_RequestSwInfo(uint8_t *Fpu8Buf)
     else
     {
         printf("[Error]: No response from target!\r\n");
-        Logger_Append("Error: No response from target!\r");
+        Logger_Append("Error: No response from target!\r\n");
         return false;
     }
 #else
@@ -266,7 +267,7 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
     if (FptsDataBlock->u32StartAddr >= ADDR_APPL_END)
     {
         printf("[Info]: Address out of range, end flash\r\n");
-        Logger_Append("Info: Address out of range, end flash\r");
+        Logger_Append("Info: Address out of range, end flash\r\n");
         return false;
     }
     /* Load block length */
@@ -294,7 +295,7 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
     /* Reverse CRC16 MSB/LSB */
     *(pu8FrameData) = u16Tmp & 0x00FF;
     *(pu8FrameData + 1) = (u16Tmp >> 8) & 0x00FF;
-    sprintf(pcLogString, "Generate block: address=0x%06X, length=%u(0x%03X), CRC frame=0x%02X%02X\r", FptsDataBlock->u32StartAddr,
+    sprintf(pcLogString, "Generate block: address=0x%06X, length=%u(0x%03X), CRC frame=0x%02X%02X\r\n", FptsDataBlock->u32StartAddr,
             FptsDataBlock->u16Len,
             FptsDataBlock->u16Len,
             (uint8_t)u16Tmp,
@@ -322,7 +323,7 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
     }
     printf("\r\n");
 #else
-    printf("[Sending]: @ 0x%06X : %u", FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len);
+    printf("[Sending]: @ 0x%06X : %u\%", FptsDataBlock->u32StartAddr, (FptsDataBlock->u16Len * 100) / su32FileSize);
 #endif
 #if SEND_UART
     if (ComPort_SendGenericFrame(&tsSendMsg, 4000) == true)
@@ -337,7 +338,7 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
         }
 #if !PRINT_DEBUG_TRACE
         printf(" : %s\r\n", spcErrCode[tsSendMsg.pu8Response[0]]);
-        sprintf(pcLogString, "Target : %s\r", spcErrCode[tsSendMsg.pu8Response[0]]);
+        sprintf(pcLogString, "Target : %s\r\n", spcErrCode[tsSendMsg.pu8Response[0]]);
         Logger_Append(pcLogString);
 #else
         printf("\r\n");
@@ -352,7 +353,7 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
 #else
         printf("[Error] : Timeout/no response !\r\n");
 #endif
-        Logger_Append("Error: Timeout/no response !\r");
+        Logger_Append("Error: Timeout/no response !\r\n");
     }
 #endif
     return bRetVal;
@@ -365,14 +366,14 @@ bool Bootloader_RequestEraseFlash(void)
     tsSendMsg.u16Length = 0;
 
     printf("[Info]: Request flash erase...\r\n");
-    Logger_Append("Info: Request flash erase...\r");
+    Logger_Append("Info: Request flash erase...\r\n");
 #if SEND_UART
     if (ComPort_SendGenericFrame(&tsSendMsg, 10000) == true)
     {
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
         {
             printf("[Target]: Flash memory erased!\r\n");
-            Logger_Append("Target: Flash memory erased!\r");
+            Logger_Append("Target: Flash memory erased!\r\n");
             su16CRCFlash = 0;
             su32CurFlashAddr = 0;
             su16CRCBlockCnt = 0;
@@ -388,7 +389,7 @@ bool Bootloader_RequestEraseFlash(void)
     else
     {
         printf("[Error]: No response from target!\r\n");
-        Logger_Append("Error: No response from target!\r");
+        Logger_Append("Error: No response from target!\r\n");
         return false;
     }
 #else
@@ -403,14 +404,14 @@ bool Bootloader_RequestBootSession(void)
     tsSendMsg.u16Length = 0;
 
     printf("[Info]: Request boot session\r\n");
-    Logger_Append("Info: Request boot session\r");
+    Logger_Append("Info: Request boot session\r\n");
 #if SEND_UART
     if (ComPort_SendGenericFrame(&tsSendMsg, 1000) == true)
     {
         if (tsSendMsg.pu8Response[0] == eOperationSuccess)
         {
             printf("[Target]: Boot session started!\r\n");
-            Logger_Append("Target: Boot session started!\r");
+            Logger_Append("Target: Boot session started!\r\n");
             return true;
         }
         else
@@ -422,7 +423,7 @@ bool Bootloader_RequestBootSession(void)
     else
     {
         printf("[Error]: No response from target!\r\n");
-        Logger_Append("Error: No response from target!\r");
+        Logger_Append("Error: No response from target!\r\n");
         return false;
     }
 #else
@@ -446,7 +447,7 @@ bool Bootloader_CheckFlash(void)
         printf("[Info]: Request flash check (0x%04X -> 0x%02X%02X)\r\n", su16CRCFlash,
                tsSendMsg.pu8Payload[0],
                tsSendMsg.pu8Payload[1]);
-        sprintf(pcLogString, "Info: Request flash check 0x%04X:0x%02X%02X\r", su16CRCFlash,
+        sprintf(pcLogString, "Info: Request flash check 0x%04X:0x%02X%02X\r\n", su16CRCFlash,
                 tsSendMsg.pu8Payload[0],
                 tsSendMsg.pu8Payload[1]);
         Logger_Append(pcLogString);
@@ -456,7 +457,7 @@ bool Bootloader_CheckFlash(void)
             if (tsSendMsg.pu8Response[0] == eOperationSuccess)
             {
                 printf("[Target]: Flash memory checked!\r\n");
-                Logger_Append("Target: Flash memory checked!\r");
+                Logger_Append("Target: Flash memory checked!\r\n");
                 return true;
             }
             else
@@ -469,7 +470,7 @@ bool Bootloader_CheckFlash(void)
                        tsSendMsg.pu8Response[5],
                        tsSendMsg.pu8Response[6]);
 
-                sprintf(pcLogString, "Target: IVT=0x%02X%02X APP+IVT=0x%02X%02X CHECK=0x%02X%02X\r", tsSendMsg.pu8Response[1],
+                sprintf(pcLogString, "Target: IVT=0x%02X%02X APP+IVT=0x%02X%02X CHECK=0x%02X%02X\r\n", tsSendMsg.pu8Response[1],
                         tsSendMsg.pu8Response[2],
                         tsSendMsg.pu8Response[3],
                         tsSendMsg.pu8Response[4],
@@ -482,7 +483,7 @@ bool Bootloader_CheckFlash(void)
         else
         {
             printf("[Error]: No response from target!\r\n");
-            Logger_Append("Error: No response from target!\r");
+            Logger_Append("Error: No response from target!\r\n");
             return false;
         }
 #else
@@ -525,4 +526,9 @@ void Bootloader_ManageCrcData(tsDataBlock *FptsDataBlock)
 uint16_t Bootloader_GetCrcData(void)
 {
     return su16CRCFlash;
+}
+
+void Bootloader_SetFileSize(uint32_t Fu32Size)
+{
+    su32FileSize = Fu32Size;
 }
