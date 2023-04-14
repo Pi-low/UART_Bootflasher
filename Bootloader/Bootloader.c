@@ -300,8 +300,6 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
             FptsDataBlock->u16Len,
             (uint8_t)u16Tmp,
             (uint8_t)(u16Tmp >> 8));
-    Logger_LineFeed();
-    Logger_AppendArray(pcLogString, FptsDataBlock->pu8Data, FptsDataBlock->u16Len);
 #if PRINT_DEBUG_TRACE && PRINT_BLOCK_RAW
     printf("\r\n[Block] address: 0x%06X length:%u\r\n", FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len);
     for (u16Cnt = 0; u16Cnt < tsSendMsg.u16Length; u16Cnt++)
@@ -335,6 +333,8 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
         else
         {
             bRetVal = false;
+            Logger_LineFeed();
+            Logger_AppendArray(pcLogString, FptsDataBlock->pu8Data, FptsDataBlock->u16Len);
         }
 #if !PRINT_DEBUG_TRACE
         printf(" : %s\r\n", spcErrCode[tsSendMsg.pu8Response[0]]);
