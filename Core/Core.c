@@ -39,6 +39,7 @@ static uint16_t u16LogisticBufLen = 0;
 static uint8_t pu8PreParserSavedData[EXTENSION];
 static uint32_t su32PreParserSavedLen = 0;
 static uint32_t su32CrcBlockPrevAddr = 0;
+static uint32_t su32MaxFileAddr = 0;
 
 /* ------------------------------------------------------------ */
 /* Static functions declaration                                 */
@@ -213,6 +214,19 @@ bool Core_CbFetchLogisticData(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint
         bRetVal = false;
     }
     return bRetVal;
+}
+
+bool Core_CbGetEndAppAddress(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
+{
+    bool bRetVal = true;
+    if ((Fu32addr + Fu8Size) < ADDR_APPL_END)
+    {
+        su32MaxFileAddr = Fu32addr + Fu8Size;
+    }
+    else
+    {
+        bRetVal = false;
+    }
 }
 
 void Core_PreParse(uint8_t *Fpu8Buffer, uint32_t *Fpu32Len)

@@ -103,18 +103,24 @@ int main(int argc, char * argv[])
             break;
 
             case eStateTargetInfo:
-                ComPort_WaitForStartupSequence(10000);
-                Sleep(100);
-                bTmp &= Bootloader_RequestSwVersion(NULL);
-                bTmp &= Bootloader_RequestSwInfo(NULL);
-                if (bTmp)
+                if(ComPort_WaitForStartupSequence(10000))
                 {
-                    teMainCurrentState = eStateFlashTarget;
+                    Sleep(100);
+                    bTmp &= Bootloader_RequestSwVersion(NULL);
+                    bTmp &= Bootloader_RequestSwInfo(NULL);
+                    if (bTmp)
+                    {
+                        teMainCurrentState = eStateFlashTarget;
+                    }
+                    else
+                    {
+                        printf("[Error]: Abort operation !\r\n");
+                        Logger_Append("Error: Abort operation !\r\n");
+                        teMainCurrentState = eStateQuit;
+                    }
                 }
                 else
                 {
-                    printf("[Error]: Abort operation !\r\n");
-                    Logger_Append("Error: Abort operation !\r\n");
                     teMainCurrentState = eStateQuit;
                 }
             break;
@@ -175,6 +181,5 @@ uint32_t main_GetFileSize(FILE* FpHexFile)
     {
         u32FileSize = ftell(FpHexFile);
     }
-    Bootloader_SetFileSize(u32FileSize);
     return u32FileSize;
 }

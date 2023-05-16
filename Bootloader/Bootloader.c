@@ -30,6 +30,7 @@
 #include "Bootloader.h"
 
 static uint32_t su32FileSize = 0;
+static uint32_t su32TransferSizeCnt = 0;
 static uint8_t spu8DataBuffer[ALLOCATION_SIZE + EXTENSION];
 static uint16_t su16CRCFlash = 0;
 static uint32_t su32CurFlashAddr = 0;
@@ -61,6 +62,8 @@ bool Bootloader_ProcessFile(FILE *FpHexFile, uint32_t Fu32FileSize)
     bool RetVal = true;
     uint8_t *pu8LastData = NULL;
     uint32_t u32Read = 0, u32DataCnt = 0, u32Remain = 0;
+    su32FileSize = Fu32FileSize;
+    su32TransferSizeCnt = 0;
 
     ihex_set_callback_func((ihex_callback_fp)Core_CbDataBlockGen);
     ihex_reset_state();
@@ -132,6 +135,22 @@ bool Bootloader_GetInfoFromiHexFile(FILE *FpHexFile, uint32_t Fu32FileSize)
     } while (ihex_parser(spu8DataBuffer, u32Read));
     Core_GetSwInfo(NULL, NULL);
     return RetVal;
+}
+
+bool Bootloader_GetHexSizeBytes(FILE *FpHexFile, uint32_t Fu32FileSize)
+{
+    bool RetVal = true;
+    uint32_t u32Read = 0;
+    ihex_reset_state();
+    ihex_set_callback_func((ihex_callback_fp)Core_CbGetEndAppAddress);
+    do
+    {
+        /* code */
+        u32Read = fread(spu8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE / BLOCK_SIZE), FpHexFile);
+        u32Read *= BLOCK_SIZE;
+        Core_PreParse(spu8DataBuffer, &u32Read);
+    } while (ihex_parser(spu8DataBuffer, u32Read));
+    
 }
 
 void Bootloader_PrintErrcode(uint8_t Fu8ErrCode)
@@ -300,6 +319,7 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
             FptsDataBlock->u16Len,
             (uint8_t)u16Tmp,
             (uint8_t)(u16Tmp >> 8));
+    su32TransferSizeCnt += FptsDataBlock->u16Len;
 #if PRINT_DEBUG_TRACE && PRINT_BLOCK_RAW
     printf("\r\n[Block] address: 0x%06X length:%u\r\n", FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len);
     for (u16Cnt = 0; u16Cnt < tsSendMsg.u16Length; u16Cnt++)
@@ -321,7 +341,7 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
     }
     printf("\r\n");
 #else
-    printf("[Sending]: @ 0x%06X : %u\%", FptsDataBlock->u32StartAddr, (FptsDataBlock->u16Len * 100) / su32FileSize);
+    printf("[Sending]: @ 0x%06X : %u\%", FptsDataBlock->u32StartAddr, (su32TransferSizeCnt * 100) / su32FileSize);
 #endif
 #if SEND_UART
     if (ComPort_SendGenericFrame(&tsSendMsg, 4000) == true)
@@ -526,9 +546,4 @@ void Bootloader_ManageCrcData(tsDataBlock *FptsDataBlock)
 uint16_t Bootloader_GetCrcData(void)
 {
     return su16CRCFlash;
-}
-
-void Bootloader_SetFileSize(uint32_t Fu32Size)
-{
-    su32FileSize = Fu32Size;
 }
