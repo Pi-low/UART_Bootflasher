@@ -258,8 +258,8 @@ void ComPort_SendStandaloneFrame(tsFrame* FptsMsg)
     }
     printf("\r\n");
 #endif // PRINT_DEBUG_TRACE
-    sprintf(pcLogString, "UART Tx:\r\n");
-    Logger_AppendArray(pcLogString, u8pBufTx, u16FrmLength);
+    //sprintf(pcLogString, "UART Tx:\r\n");
+    //Logger_AppendArray(pcLogString, u8pBufTx, u16FrmLength);
     RS232_flushRX(siComPortNumber);
     RS232_SendBuf(siComPortNumber, u8pBufTx, FptsMsg->u16Length + 5);
 }
@@ -317,6 +317,7 @@ bool ComPort_WaitForStartupSequence(uint16_t Fu16Timeout)
         printf("[Info]:Startup sequence not caught, target in idle (boot) mode\r\n");
         sprintf(pcLogString, "Tool: Startup sequence not caught, target in idle (boot) mode\r\n");
         Logger_Append(pcLogString);
+        bRetVal = true;
     }
     return bRetVal;
 }

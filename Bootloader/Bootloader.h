@@ -39,6 +39,7 @@ typedef struct
     uint32_t u32StartAddr;
     uint32_t u32EndAddr;
     uint16_t u16Len;
+    uint16_t u16Extra;
     uint8_t pu8Data[BYTES_PER_BLOCK];
     uint16_t u16CRCBlock;
 } tsDataBlock;
@@ -88,6 +89,7 @@ typedef enum
 
 bool Bootloader_ProcessFile(FILE* FpHexFile, uint32_t Fu32FileSize);
 bool Bootloader_GetInfoFromiHexFile(FILE* FpHexFile, uint32_t Fu32FileSize);
+bool Bootloader_GetHexSizeBytes(FILE *FpHexFile, uint32_t Fu32FileSize);
 void Bootloader_PrintErrcode(uint8_t Fu8ErrCode);
 bool Bootloader_RequestSwVersion(uint16_t* Fpu16Version);
 bool Bootloader_RequestSwInfo(uint8_t* Fpu8Buf);
@@ -98,6 +100,5 @@ bool Bootloader_CheckFlash(void);
 void Bootloader_NotifyEndFlash(void);
 void Bootloader_ManageCrcData(tsDataBlock* FptsDataBlock);
 uint16_t Bootloader_GetCrcData(void);
-void Bootloader_SetFileSize(uint32_t Fu32Size);
 
 #endif // BOOTLOADER_H_INCLUDED

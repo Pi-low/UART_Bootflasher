@@ -24,6 +24,8 @@
 #include "../Logger/Logger.h"
 #include "Core.h"
 
+uint32_t gu32HexByteCount = 0;
+
 /* ------------------------------------------------------------ */
 /* Static variables declaration                                 */
 /* ------------------------------------------------------------ */
@@ -119,6 +121,7 @@ bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t F
             {
                 memcpy(&tsCurrentDatablock.pu8Data[tsCurrentDatablock.u16Len], Pu8BlankWord, 4);
                 u16Cnt += 4;
+                tsCurrentDatablock.u16Extra +=4;
                 tsCurrentDatablock.u16Len += 4;
             }
             for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
@@ -164,6 +167,7 @@ bool Core_CbDataBlockGen(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t F
         while (u16Cnt < tsCurrentDatablock.u16Len)
         {
             memcpy(&tsCurrentDatablock.pu8Data[u16Cnt], Pu8BlankWord, 4);
+            tsCurrentDatablock.u16Extra += 4;
             u16Cnt += 4;
         }
         for (u16Cnt = 0; u16Cnt < Fu8Size; u16Cnt++)
@@ -209,6 +213,24 @@ bool Core_CbFetchLogisticData(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint
         bRetVal = false;
     }
     if (Fu32addr >= ADDR_START_APPLI)
+    {
+        bRetVal = false;
+    }
+    return bRetVal;
+}
+
+bool Core_CbGetEndAppAddress(uint32_t Fu32addr, const uint8_t* Fpu8Buffer, uint8_t Fu8Size)
+{
+    bool bRetVal = true;
+    uint32_t u32EndAddr = Fu32addr + Fu8Size;
+    if (u32EndAddr < ADDR_APPL_END)
+    {
+        if ((Fu32addr < ADDR_START_BOOT) || (Fu32addr >= ADDR_START_APPLI))
+        {
+            gu32HexByteCount += Fu8Size;
+        }
+    }
+    else
     {
         bRetVal = false;
     }
@@ -303,6 +325,7 @@ bool Core_SendBlock(uint32_t Fu32NewStartAddr)
     tsCurrentDatablock.u32StartAddr = Fu32NewStartAddr - u32OffsetAddr;
     tsCurrentDatablock.u32EndAddr = tsCurrentDatablock.u32StartAddr + (uint32_t)BYTES_PER_BLOCK;
     tsCurrentDatablock.u16Len = u32OffsetAddr;
+    tsCurrentDatablock.u16Extra = 0;
 
    return bRetVal;
 }
