@@ -39,6 +39,7 @@ typedef struct
     uint32_t u32StartAddr;
     uint32_t u32EndAddr;
     uint16_t u16Len;
+    uint16_t u16Extra;
     uint8_t pu8Data[BYTES_PER_BLOCK];
     uint16_t u16CRCBlock;
 } tsDataBlock;

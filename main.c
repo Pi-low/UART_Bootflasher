@@ -91,6 +91,7 @@ int main(int argc, char * argv[])
                     printf("Open: \"%s\"\r\n", pcString);
                     u32TotalFileSize = main_GetFileSize(MyFile);
                     Bootloader_GetInfoFromiHexFile(MyFile, u32TotalFileSize);
+                    Bootloader_GetHexSizeBytes(MyFile, u32TotalFileSize);
                     teMainCurrentState = eStateTargetInfo;
                     system("pause");
                 }

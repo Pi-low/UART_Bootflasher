@@ -124,6 +124,7 @@ bool Bootloader_GetInfoFromiHexFile(FILE *FpHexFile, uint32_t Fu32FileSize)
     uint32_t u32Read = 0;
 
     ihex_reset_state();
+    Core_InitDataBlockGen();
     ihex_set_callback_func((ihex_callback_fp)Core_CbFetchLogisticData);
     fseek(FpHexFile, 0, SEEK_SET);
 
@@ -140,17 +141,48 @@ bool Bootloader_GetInfoFromiHexFile(FILE *FpHexFile, uint32_t Fu32FileSize)
 bool Bootloader_GetHexSizeBytes(FILE *FpHexFile, uint32_t Fu32FileSize)
 {
     bool RetVal = true;
-    uint32_t u32Read = 0;
+    uint8_t *pu8LastData = NULL;
+    uint32_t u32Read = 0, u32DataCnt = 0, u32Remain = 0;
+    FILE *pFile = FpHexFile;
     ihex_reset_state();
     ihex_set_callback_func((ihex_callback_fp)Core_CbGetEndAppAddress);
-    do
+    Core_InitDataBlockGen();
+    fseek(pFile, 0, SEEK_SET);
+
+    while ((u32DataCnt < Fu32FileSize) && (RetVal == true))
     {
         /* code */
-        u32Read = fread(spu8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE / BLOCK_SIZE), FpHexFile);
-        u32Read *= BLOCK_SIZE;
-        Core_PreParse(spu8DataBuffer, &u32Read);
-    } while (ihex_parser(spu8DataBuffer, u32Read));
-    
+        u32Read = fread(spu8DataBuffer, BLOCK_SIZE, (ALLOCATION_SIZE / BLOCK_SIZE), pFile);
+        if (u32Read != 0)
+        {
+            u32Read *= BLOCK_SIZE;
+            u32DataCnt += u32Read;
+            Core_PreParse(spu8DataBuffer, &u32Read);
+            RetVal = ihex_parser(spu8DataBuffer, u32Read);
+        }
+        else
+        {
+            fseek(pFile, -(int)BLOCK_SIZE, SEEK_END); /* Set cursor to last block */
+            u32Read = fread(spu8DataBuffer, BLOCK_SIZE, 1, pFile);
+            u32Remain = Fu32FileSize - u32DataCnt;
+            if (u32Read != 0)
+            {
+                u32Read *= BLOCK_SIZE;
+                u32DataCnt += u32Remain;
+
+                pu8LastData = spu8DataBuffer;
+                pu8LastData += u32Read - u32Remain;
+
+                Core_PreParse(pu8LastData, &u32Remain);
+                RetVal = ihex_parser(pu8LastData, u32Remain);
+            }
+            else
+            {
+                RetVal = false;
+            }
+        }
+    };
+    return RetVal;
 }
 
 void Bootloader_PrintErrcode(uint8_t Fu8ErrCode)
@@ -319,7 +351,7 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
             FptsDataBlock->u16Len,
             (uint8_t)u16Tmp,
             (uint8_t)(u16Tmp >> 8));
-    su32TransferSizeCnt += FptsDataBlock->u16Len;
+    su32TransferSizeCnt += FptsDataBlock->u16Len - FptsDataBlock->u16Extra;
 #if PRINT_DEBUG_TRACE && PRINT_BLOCK_RAW
     printf("\r\n[Block] address: 0x%06X length:%u\r\n", FptsDataBlock->u32StartAddr, FptsDataBlock->u16Len);
     for (u16Cnt = 0; u16Cnt < tsSendMsg.u16Length; u16Cnt++)
@@ -341,7 +373,7 @@ bool Bootloader_TransferData(tsDataBlock *FptsDataBlock)
     }
     printf("\r\n");
 #else
-    printf("[Sending]: @ 0x%06X : %u\%", FptsDataBlock->u32StartAddr, (su32TransferSizeCnt * 100) / su32FileSize);
+    printf("[Sending]: @ 0x%06X (%d%c)", FptsDataBlock->u32StartAddr, (su32TransferSizeCnt * 100) / gu32HexByteCount, '%');
 #endif
 #if SEND_UART
     if (ComPort_SendGenericFrame(&tsSendMsg, 4000) == true)
