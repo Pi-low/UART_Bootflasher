@@ -317,6 +317,7 @@ bool ComPort_WaitForStartupSequence(uint16_t Fu16Timeout)
         printf("[Info]:Startup sequence not caught, target in idle (boot) mode\r\n");
         sprintf(pcLogString, "Tool: Startup sequence not caught, target in idle (boot) mode\r\n");
         Logger_Append(pcLogString);
+        bRetVal = true;
     }
     return bRetVal;
 }
